@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Tests</title>
+  <style type="text/css" media="screen">
+    html, body { height: 100%; }
+    body { margin: 0; padding: 0 }
+    canvas { display: block }
+  </style>
+  <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="../test/Test.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../test/Attributes.test.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../test/Animator.test.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../test/Materials.test.js"></script>
+
+<script type="text/javascript" charset="utf-8">
+
+DomReady.ready(function() {
+  ThreeBox.preload([
+    '../shaders/snippets.glsl.html',
+    '../vendor/ThreeRTT.js/build/ThreeRTT.glsl.html',
+    '../vendor/ThreeRTT.js/shaders/examples.glsl.html',
+  ], function () {
+    var runner = new Test();
+  });
+});
+
+</script>
+
+</head>
+<body>
+  <div id="test-output"></div>
+</body>
+</html>

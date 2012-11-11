@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Example: Bezier Surface</title>
+
+  <style type="text/css" media="screen">
+    html, body { height: 100%; }
+    body { margin: 0; padding: 0 }
+    canvas { display: block }
+  </style>
+
+  <script type="text/javascript" charset="utf-8" src="../vendor/domready.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
+
+  <script type="text/javascript" charset="utf-8">
+    DomReady.ready(function () {
+      if (location.href.match(/^file:/)) {
+        document.getElementById('info').innerHTML = "Sorry. This example does not work when accessed using file://. Please use an http:// host and try again.";
+      }
+    });
+  </script>
+
+  <style type="text/css" media="screen">
+    #info {
+      position: absolute;
+      left: 50%;
+      bottom: 50px;
+      z-index: 20;
+
+      width: 300px;
+      margin-left: -150px;
+
+      padding: 25px;
+      background: rgba(0, 0, 0, .3);
+      color: #fff;
+
+      font-family: "Lucida Grande", sans-serif;
+      font-size: 16px;
+      text-align: center;
+
+      border-radius: 3px;
+      text-shadow: 0px 1px 0px rgba(0, 0, 0, .4);
+      
+      -webkit-transition: opacity 300ms ease-in-out;
+      -moz-transition: opacity 300ms ease-in-out;
+      transition: opacity 300ms ease-in-out;
+    }
+    
+    #info kbd {
+      background: #ccc;
+      box-shadow: 0px 1px 1px rgba(0, 0, 0, .3);
+      border-radius: 3px;
+      padding: 3px;
+      margin: 3px;
+      
+      font-family: inherit;
+    }
+  </style>
+
+  <script type="text/javascript" charset="utf-8">
+  /**
+   * Bootstrap
+   */
+  DomReady.ready(function() {
+    ThreeBox.preload([
+      '../shaders/snippets.glsl.html',
+      '../vendor/ThreeRTT.js/build/ThreeRTT.glsl.html',
+      '../vendor/ThreeRTT.js/shaders/examples.glsl.html',
+    ], function () {
+
+      // MathBox boilerplate
+      var mathbox = window.mathbox = mathBox({
+        cameraControls: true,
+        cursor:         true,
+        controlClass:   ThreeBox.OrbitControls,
+        elementResize:  true,
+        fullscreen:     true,
+        screenshot:     true,
+        stats:          false,
+        scale:          1,
+      }).start();
+
+      // Viewport camera/setup
+      mathbox
+        .viewport({
+          type: 'cartesian',
+          range: [[0, 1], [-1, 1], [0, 1]],
+          scale: [.8, .8, .8],
+        })
+        .camera({
+          orbit: 3.5,
+          theta: τ/4,
+        })
+        .transition(300);
+
+      // Director
+      var director = window.director = new MathBox.Director(mathbox, script);
+
+      // Arrow controls
+      // Controls for stand-alone
+      window.addEventListener('keydown', function (e) {
+        if (e.keyCode == 38 || e.keyCode == 37) director.back();
+        else if (e.keyCode == 40 || e.keyCode == 39) director.forward();
+        else {
+          return;
+        }
+
+        document.getElementById('info').style.opacity = '0';
+      });
+    });
+  });
+  </script>
+  
+  <script type="text/javascript" charset="utf-8">
+  /**
+   * Custom helpers
+   */
+
+  // Clock that starts as soon as it is first called (per id).
+  var clocks = {};
+  window.clock = function (id) {
+    if (!clocks[id]) clocks[id] = +new Date();
+    return (+new Date() - clocks[id]) * .001;
+  }
+
+  // Generate randomly offset control points for a bezier surface
+  function surface(a, b, x, y) {
+    y *= 5.1;
+    x = x * 3.8;
+    s = .35 + (a >= 1 && a <= 2 ? .45 : 0);
+    return [a/3, Math.cos(x+y*.5) * Math.cos(y*.9) * s + s, b/3];
+  }
+
+  // Animated control points for a bezier surface
+  function surface2(a, b, x, y) {
+    t = clock(2) - 2;
+
+    f = Math.min(1, Math.max(0, t))*.2;
+    c = (a != 0 && a != 3) || (b != 0 && b != 3) ? 1 : 0;
+
+    y *= 5.1;
+    x = x * 3.8;
+    s = .35 + (a >= 1 && a <= 2 ? .45 : 0);
+
+    t = t * 1.3;
+    t += x + y + 3;
+
+    return [
+      a/3 + Math.cos(t*.43)*f*c,
+      Math.cos(x+y*.5) * Math.cos(y*.9) * s + s + Math.cos(t*.33+2)*f*c,
+      b/3 + Math.sin(-t*.63+1)*f*c];
+  }
+
+  // Project surface down for shadow
+  function shadow(a, b, x, y) {
+    var p = surface(a, b, x, y);
+    p[1] = 0;
+    return p;
+  }
+
+  // Project animated surface down for shadow
+  function shadow2(a, b, x, y) {
+    var p = surface2(a, b, x, y);
+    p[1] = 0;
+    return p;
+  }
+
+  // Base plane of surface
+  function flat(a, b, x, y) {
+    return [a/3, 0.001, b/3];
+  }
+
+  // 1D slice of surface control points
+  function surface1(b) {
+    var y = b;
+    return function (a, x) {
+      return surface(a, b, x, y);
+    }
+  }
+
+  // 1D slice of flat control points
+  function flat1(b) {
+    var y = b;
+    return function (a, x) {
+      return flat(a, b, x, y);
+    }
+  }
+
+  // Sweeping motion 
+  function sweep(a, x) {
+    var t = lerptime(clock(1));
+
+    var q = [];
+    _.loop(4, function (i) {
+      q.push(surface(i, a, i, x));
+    });
+    q.push(t);
+    return cubiclerp.apply(null, q);
+  }
+
+  // Cubic bezier interpolation
+  function cubiclerp(a, b, c, d, t) {
+    var ab = lerp(a, b, t),
+        bc = lerp(b, c, t),
+        cd = lerp(c, d, t);
+
+    return lerp(
+        lerp(ab, bc, t),
+        lerp(bc, cd, t),
+        t
+      );
+  }
+
+  // Linear interpolation
+  function lerp(a, b, t) {
+    return [ a[0]+(b[0]-a[0])*t || 0, a[1]+(b[1]-a[1])*t || 0,  a[2]+(b[2]-a[2])*t || 0 ];
+  }
+
+  // Back and forth easing curve with minor pause at the edges.
+  function lerptime(t) {
+    t = t*.33-.5;
+    t = Math.sin(Math.min(1, Math.max(-1, .7*Math.asin(Math.sin(π*t))))*τ/4);
+    return t*.5+.5;
+  }
+
+  // Two control points for linear interpolation
+  var lerppoints = [
+    [1.2, 0.3, 0.1],
+    [1.2, 0.3, 0.9],
+  ];
+
+  // Interpolated control point for linear interpolation
+  function lerppoint() {
+    var t = lerptime(clock(3)+3);
+    return lerp(lerppoints[0], lerppoints[1], t);
+  }
+
+  // Script
+  var script = [
+
+    // 4x4 grid
+    [
+      ['add', 'grid', {
+        axis: [ 0, 2 ],
+        color: 0xB0B0B0,
+        offset: [0, 0, 0],
+        lineWidth: 2,
+        tickBase: [1/3, 1/3],
+        ticks: [3, 3],
+      }, {
+        duration: 300,
+      }],
+      ['add', 'surface', {
+        id: 'dots',
+        domain: [[0, 3], [0, 3]],
+        n: 4,
+        points: true,
+        mesh: false,
+        live: true,
+        expression: flat,
+        pointSize: 20,
+        zIndex: 1,
+      }],
+    ],
+
+    // Connect 4 points each
+    [
+      ['animate', 'surface', {
+        opacity: 0.5
+      }, {
+        duration: 500,
+      }],
+      ['add', 'bezier', {
+        id: 'b1',
+        live: true,
+        expression: flat1(0),
+        lineWidth: 6,
+        zIndex: 2,
+      }, {
+        duration: 500,
+      }],
+      ['add', 'bezier', {
+        id: 'b2',
+        live: true,
+        expression: flat1(1),
+        lineWidth: 6,
+        zIndex: 2,
+      }, {
+        duration: 500,
+      }],
+      ['add', 'bezier', {
+        id: 'b3',
+        live: true,
+        expression: flat1(2),
+        lineWidth: 6,
+        zIndex: 2,
+      }, {
+        duration: 500,
+      }],
+      ['add', 'bezier', {
+        id: 'b4',
+        live: true,
+        expression: flat1(3),
+        lineWidth: 6,
+        zIndex: 2,
+      }, {
+        duration: 500,
+      }],
+    ],
+
+    // Go 3d
+    [
+      ['animate', 'camera', {
+        theta: .5,
+        phi: τ/8,
+      }, {
+        delay: 0,
+        duration: 1000,
+      }],
+
+      ['animate', '#b1', {
+        expression: surface1(0),
+      }, {
+        delay: 1300,
+        duration: 700,
+      }],
+
+      ['animate', '#b2', {
+        expression: surface1(1),
+      }, {
+        delay: 1300,
+        duration: 700,
+      }],
+      ['animate', '#b3', {
+        expression: surface1(2),
+      }, {
+        delay: 1300,
+        duration: 700,
+      }],
+      ['animate', '#b4', {
+        expression: surface1(3),
+      }, {
+        delay: 1300,
+        duration: 700,
+      }],
+
+      ['animate', '#dots', {
+        expression: surface,
+      }, {
+        delay: 1300,
+        duration: 700,
+      }],
+      ['add', 'surface', {
+        id: 'shadow',
+        domain: [[0, 3], [0, 3]],
+        n: 4,
+        points: true,
+        mesh: false,
+        live: true,
+        color: 0x000000,
+        opacity: .1,
+        expression: shadow,
+        pointSize: 20,
+        zIndex: -100,
+      }],
+    ],
+
+    // Sweep cross bezier
+    [
+      ['animate', 'surface', {
+        opacity: 0,
+      }, {
+        duration: 500,
+      }],
+      ['animate', 'bezier', {
+        color: 0xB0B0B0,
+      }, {
+        duration: 500,
+      }],
+      ['add', 'curve', {
+        n: 4,
+        id: "sweepdots",
+        domain: [0, 3],
+        points: true,
+        line: false,
+        pointSize: 20,
+        live: true,
+        expression: sweep,
+      }, {
+        duration: 300,
+      }],
+    ],
+
+    // Connect
+    [
+      ['add', 'bezier', {
+        id: 'sweep',
+        lineWidth: 6,
+        live: true,
+        expression: sweep,
+      }, {
+        duration: 300,
+      }],
+    ],
+
+    // Surface
+    [
+      ['remove', '#sweep', { duration: 1000 }],
+      ['remove', '#sweepdots', { duration: 1000 }],
+      ['remove', '#b1', { duration: 1000 }],
+      ['remove', '#b2', { duration: 1000 }],
+      ['remove', '#b3', { duration: 1000 }],
+      ['remove', '#b4', { duration: 1000 }],
+      ['animate', '#shadow', {
+        opacity: .1,
+      }, {
+        duration: 500,
+      }],
+      ['animate', '#dots', {
+        color: 0x303030,
+        pointSize: 15,
+        opacity: 1
+      }, {
+        duration: 500,
+      }],
+      ['add', 'surface', {
+        id: "dots",
+        domain: [[0, 3], [0, 3]],
+        n: 4,
+        points: true,
+        mesh: false,
+        live: true,
+        expression: surface,
+        pointSize: 20,
+        color: 0xffffff,
+      }],
+      ['add', 'bezierSurface', {
+        n: 64,
+        id: 'result',
+        domain: [[0, 0], [0, 1]],
+        points: false,
+        mesh: true,
+        line: false,
+        live: true,
+        expression: surface,
+      }],
+      ['add', 'bezierSurface', {
+        n: 24,
+        id: 'resultshadow',
+        domain: [[0, 0], [0, 1]],
+        points: false,
+        mesh: true,
+        line: false,
+        live: true,
+        color: 0x000000,
+        opacity: .1,
+        expression: shadow,
+      }],
+      ['add', 'bezierSurface', {
+        n: 24,
+        id: 'result',
+        domain: [[0, 0], [0, 1]],
+        points: false,
+        mesh: false,
+        line: true,
+        live: true,
+        zIndex: 10,
+        color: 0x2060E0,
+        lineWidth: 3,
+        opacity: 1,
+        expression: surface,
+      }],
+      ['animate', '#result', {
+        domain: [[0, 1], [0, 1]],
+      }, {
+        delay: 0,
+        duration: 1500,
+      }],
+      ['animate', '#resultshadow', {
+        domain: [[0, 1], [0, 1]],
+      }, {
+        delay: 0,
+        duration: 1500,
+      }],
+      ['animate', 'camera', {
+        phi: 0,
+        theta: .8,
+      }, {
+        duration: 10000,
+      }],
+      ['animate', '#result', {
+        expression: surface2,
+      }, {
+        delay: 500
+      }],
+      ['animate', '#resultshadow', {
+        expression: shadow2,
+      }, {
+        delay: 500
+      }],
+      ['animate', '#dots', {
+        expression: surface2,
+      }, {
+        delay: 500
+      }],
+      ['animate', '#shadow', {
+        expression: shadow2,
+      }, {
+        delay: 500
+      }],
+    ],
+
+    [],
+
+    [
+      ['add', 'curve', {
+        n: 2,
+        points: false,
+        line: true,
+        data: lerppoints,
+        color: 0xB040D0,
+        lineWidth: 6,
+        opacity: .5,
+      }, {
+        duration: 600,
+      }],
+      ['add', 'curve', {
+        n: 2,
+        points: true,
+        line: false,
+        data: lerppoints,
+        color: 0x404040,
+        pointSize: 20,
+        zIndex: 1,
+      }, {
+        duration: 600,
+      }],
+      ['add', 'curve', {
+        n: 1,
+        points: true,
+        line: false,
+        live: true,
+        expression: lerppoint,
+        color: 0xB040D0,
+        pointSize: 20,
+        zIndex: 2,
+      }, {
+        duration: 600,
+        pointSize: 20,
+      }],
+    ],
+
+    [],
+  ];
+
+  </script>
+
+</head>
+<body>
+  <div id="info">Use the <kbd>←</kbd><kbd>→</kbd> keys to step through.</div>
+</body>
+</html>
