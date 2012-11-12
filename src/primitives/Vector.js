@@ -1,3 +1,6 @@
+/**
+ * One or more vectors with given start and end points.
+ */
 MathBox.Vector = function (options) {
   // Allow inheritance constructor
   if (options === null) return;

@@ -1,3 +1,6 @@
+/**
+ * Generic viewport base class
+ */
 MathBox.Viewport = function (options) {
   if (options === null) return;
 

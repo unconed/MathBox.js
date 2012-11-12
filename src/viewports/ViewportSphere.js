@@ -1,3 +1,15 @@
+/**
+ * Cartesian to spherical viewport transform.
+ *
+ * To animate the transition, the origin of the spherical coordinate grid (the focus) is moved
+ * from infinity out to 0. In doing so, grid lines in the X/Y direction bend smoothly from
+ * straight lines (circles of infinite radius) into circular arcs, while grid lines in the Z
+ * direction transition from being parallel (meeting at infinity) to crossing at the origin.
+ *
+ * Like the polar viewport, aspect ratio correction is paramount to making this look good.
+ * In the X/Z plane, the transform matches the Polar viewport transform.
+ * In the Y direction, additional aspect ratio corrections are required.
+ */
 MathBox.ViewportSphere = function (options) {
   var _super = MathBox.ViewportCartesian;
   _super.call(this, options);
@@ -118,14 +130,19 @@ MathBox.ViewportSphere.prototype = _.extend(new MathBox.ViewportCartesian(null),
         sz = s[2];
 
     // Adjust viewport for sphere.
+    // As the viewport goes spherical, the X/Y-ranges are interpolated to the Z-range,
+    // creating a perfectly spherical viewport.
     var fdx = dx+(dz-dx)*alpha;
     var fdy = dy+(dz-dy)*alpha;
     var sdx = fdx/sx,
         sdy = fdy/sy,
         sdz = dz/sz;
-    aspectX = sdx/sdz,
-    aspectY = sdy/sdz/aspectX,
-    aspectZ = dy/dx*sx/sy*2,
+    aspectX = sdx/sdz, // First fix X aspect to match Z
+    aspectY = sdy/sdz/aspectX, // Then fix Y aspect
+
+    // Scale Y coordinates before transforming, but cap at aspectY/alpha to prevent from poking through the poles mid-transform.
+    aspectZ = dy/dx*sx/sy*2, // Factor of 2 due to the fact that in the Y direction we only go 180º from pole to pole.
+    // This makes more sense if you look at how the vertex shader is implemented.
      yScale = Math.min(aspectY / alpha, 1 + (aspectZ - 1) * alpha);
 
     // Forward transform

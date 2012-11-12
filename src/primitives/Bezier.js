@@ -1,3 +1,6 @@
+/**
+ * Bezier curve of order 1-3.
+ */
 MathBox.Bezier = function (options) {
   MathBox.Curve.call(this, options);
 };

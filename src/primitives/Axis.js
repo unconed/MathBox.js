@@ -1,3 +1,6 @@
+/**
+ * Axis with arrowhead and tick markers.
+ */
 MathBox.Axis = function (options) {
   // Allow inheritance constructor
   if (options === null) return;

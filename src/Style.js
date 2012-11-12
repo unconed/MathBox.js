@@ -1,3 +1,6 @@
+/**
+ * Object containing style attributes and their validators.
+ */
 MathBox.Style = function (options) {
   // Apply defaults
   var defaults = this.defaults();

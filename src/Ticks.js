@@ -1,3 +1,6 @@
+/**
+ * Helper to place equally spaced ticks in a range at sensible positions.
+ */
 MathBox.Ticks = function (min, max, n, scale, inclusive) {
   n = n || 10;
 
@@ -5,7 +8,7 @@ MathBox.Ticks = function (min, max, n, scale, inclusive) {
   var span = max - min;
   var ideal = span / n;
 
-  // Round to the floor'd power of ten.
+  // Round to the floor'd power of ten (or two, for pi-ticks).
   scale = scale || 1;
   var base = scale == π ? 2 : 10;
   var ref = scale * Math.pow(base, Math.floor(Math.log(ideal / scale) / Math.log(base)));
@@ -20,7 +23,6 @@ MathBox.Ticks = function (min, max, n, scale, inclusive) {
   }, ref);
 
   // Renormalize min/max onto aligned steps.
-  // Leave some room around the end for the arrow.
   var edge = +!inclusive;
   min = (Math.ceil(min / step) + edge) * step;
   max = (Math.floor(max / step) - edge) * step;

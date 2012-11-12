@@ -205,7 +205,7 @@ var CSS3D = Acko.CSS3DRenderer = function (options) {
  */
 CSS3D.getTemplate = function (id) {
   var e = document.getElementById('template-' + id);
-  return e && e.innerText;
+  return e && (e.innerText || e.textContent);
 };
 
 /**
@@ -3146,12 +3146,20 @@ MathBox.Attributes.mixin = function (klass) {
     klass.prototype[key] = MathBox.Attributes.prototype[key];
   })
 };
+/**
+ * Attribute animator. Works on any object with the Attributes.js mixin.
+ *
+ * Requires manual synchronization by calling animator.update().
+ */
 MathBox.Animator = function () {
   this.active = [];
 };
 
 MathBox.Animator.prototype = {
 
+  /**
+   * Return the final state of an object after all currently queued animations have run their course.
+   */
   finalState: function (object) {
     var state = _.extend({}, object.get());
     if (object.__queue) {
@@ -3166,6 +3174,9 @@ MathBox.Animator.prototype = {
     return state;
   },
 
+  /**
+   * Attach animator to an object.
+   */
   attach: function (object) {
     if (object.__queue) return;
     if (!object.__attributes) throw "Cannot attach to object without attributes";
@@ -3202,6 +3213,9 @@ MathBox.Animator.prototype = {
     object.__animations = 0;
   },
 
+  /**
+   * Hurry all animations on an object.
+   */
   hurry: function (object, keys, limit) {
     limit = limit || 300;
 
@@ -3218,6 +3232,9 @@ MathBox.Animator.prototype = {
     }.bind(this));
   },
 
+  /**
+   * Stop all animations on an object.
+   */
   stop: function (object, keys) {
     // Dequeue all animations, applying instantly.
     _.each(keys || object.__queue, function (queue, key) {
@@ -3227,6 +3244,9 @@ MathBox.Animator.prototype = {
     }.bind(this));
   },
 
+  /**
+   * Animate a set of attributes on an object.
+   */
   animate: function (object, attributes, options) {
     var defaults = {
       duration: 300//,
@@ -3266,6 +3286,9 @@ MathBox.Animator.prototype = {
     }.bind(this));
   },
 
+  /**
+   * Remove current animation on an object attribute.
+   */
   dequeue: function (object, key, apply) {
 
     // Check if key is animated
@@ -3287,6 +3310,9 @@ MathBox.Animator.prototype = {
     }
   },
 
+  /**
+   * Update all currently running animations.
+   */
   update: function () {
     _.each(this.active, function (object) {
       _.each(object.__queue, function update(queue, key) {
@@ -3308,6 +3334,9 @@ MathBox.Animator.prototype = {
   }//,
 }
 
+/**
+ * Non-animation that just adds a delay.
+ */
 MathBox.Animator.Delay = function (object, key, duration) {
   this.object = object;
   this.key = key;
@@ -3341,6 +3370,9 @@ MathBox.Animator.Delay.prototype = {
   }//,
 }
 
+/**
+ * Animation on a single attribute.
+ */
 MathBox.Animator.Animation = function (object, key, value, duration, callback, ease) {
   this.object = object;
   this.key = key;
@@ -3372,6 +3404,7 @@ MathBox.Animator.Animation.prototype = {
     var key = this.key;
     var ease = this.ease;
 
+    // Calculate animation progress / fraction.
     var fraction;
     if (this.duration > 0) {
       fraction = Math.min(1, (+new Date() - this.start) / (this.duration || 1));
@@ -3381,6 +3414,7 @@ MathBox.Animator.Animation.prototype = {
     }
     this.fraction = fraction;
 
+    // Simple easing support.
     var rolloff;
     switch (ease) {
       case 'in':
@@ -3394,11 +3428,14 @@ MathBox.Animator.Animation.prototype = {
         break;
     }
 
+    // Linear interpolation
     function lerp(from, to) {
       return from + (to - from) * rolloff;
     }
 
+    // Interpolate between two arbitrary values/objects.
     function process(from, to) {
+
       // Handle default cases.
       if (to === undefined) {
         to = from;
@@ -3407,11 +3444,13 @@ MathBox.Animator.Animation.prototype = {
         return from;
       }
 
+      // Sanity type check.
       if (typeof from != typeof to) {
         console.log(object, key)
         throw "Data type mismatch between from/to values in animator. "+ key +': '+ from + ' ('+ from.constructor +')' + ", " + to + "("+ to.constructor +")";
       }
 
+      // Type-specific behavior.
       var out;
       switch (typeof to) {
         default:
@@ -3632,6 +3671,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     }
   },
 
+  /**
+   * Add primitive to stage, instantiate its renderables.
+   */
   _add: function (primitive) {
     var materials = this.materials;
 
@@ -3648,6 +3690,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     }.bind(this));
   },
 
+  /**
+   * Remove primitive from stage, remove its renderables.
+   */
   _remove: function (primitive) {
     if (this.primitives.indexOf(primitive) == -1) return;
 
@@ -3663,10 +3708,11 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
   },
 
-  /**
-   * Primitive manipulation
-   */
+  ///// Primitive manipulation //////////////
 
+  /**
+   * Select primitives by type or ID.
+   */
   select: function (selector, includeDead) {
     var out = [];
 
@@ -3699,7 +3745,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         return out;
       }
 
-      // Parse css-like selector: #id, type, type[index]
+      // Parse css-like selector: #id, type
       var match = selector.match(/^\s*#([a-zA-Z0-9_-]+)|([a-zA-Z0-9_-]+)?\s*$/);
       if (!match) return [];
 
@@ -3716,6 +3762,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       }
       else {
 
+        // Special singletons
         if (type == 'camera') {
           return this.cameraProxy && [this.cameraProxy] || [];
         }
@@ -3724,6 +3771,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
           return [this.viewport()];
         }
 
+        // Declared primitive types
         if (type) {
           _.each(this.primitives, function (primitive) {
             if ((includeDead || !primitive.removed) && primitive.type() == type) {
@@ -3745,6 +3793,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     return out;
   },
 
+  /**
+   * Set properties on primitives.
+   */
   set: function (selector, options) {
     options = this.extractStyle(options);
     _.each(this.select(selector), function (primitive) {
@@ -3752,6 +3803,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     });
   },
 
+  /**
+   * Get (finalized) properties of a primitive.
+   */
   get: function (selector) {
     var animator = this.animator;
 
@@ -3768,8 +3822,10 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     return out;
   },
 
+  ////////// Primitive animation ////////////////////////
+
   /**
-   * Primitive animation
+   * Set default transition duration
    */
   transition: function (duration) {
     if (duration !== undefined) {
@@ -3779,6 +3835,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     return this.duration;
   },
 
+  /**
+   * Resolve animation options
+   */
   animateOptions: function (animate, force) {
     var auto = this.duration;
     if (animate === true) animate = {};
@@ -3790,6 +3849,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     }
   },
 
+  /**
+   * Animate primitives to give state.
+   */
   animate: function (selector, options, animate) {
     var animator = this.animator;
 
@@ -3809,6 +3871,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     });
   },
 
+  /**
+   * Hurry primitives currently being animated.
+   */
   hurry: function (selector, keys, limit) {
     var animator = this.animator;
 
@@ -3818,6 +3883,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     });
   },
 
+  /**
+   * Stop animations on primitives
+   */
   halt: function (selector, keys) {
     var animator = this.animator;
 
@@ -3827,10 +3895,13 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     });
   },
 
-  // Get/set viewport
+  /**
+   * Change properties of viewport
+   */
   viewport: function (viewport) {
     if (viewport !== undefined) {
       if (!this._viewport || (viewport.type && viewport.type != this.options.viewport.type)) {
+        // If changing viewport type, renderables need to be re-instantiated to regenerate shaders.
         this._viewport = MathBox.Viewport.make(viewport);
         var primitives = this.primitives.slice(),
             stage = this;
@@ -3840,6 +3911,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         })
       }
       else {
+        // Set properties directly
         this._viewport.set(viewport);
       }
       this.options.viewport = this._viewport.get();
@@ -3873,11 +3945,11 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     return this._world;
   },
 
-  /**
-   * Primitive constructors
-   */
+  //////////// Primitive constructors ////////////////
 
-  // Extract style properties from flattened options and put into style subkey for convenience.
+  /**
+   * Extract style properties from flattened options and put into style subkey for convenience.
+   */
   extractStyle: function (options) {
     var styles = MathBox.Style.prototype.defaults();
     var out = null;
@@ -3894,6 +3966,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     return options;
   },
 
+  /**
+   * Spawn primitive by type
+   */
   spawn: function (selector, options, animate) {
     if (MathBox.Primitive.types[selector]) {
       this[selector](options, animate);
@@ -3901,6 +3976,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     }
   },
 
+  /**
+   * Load all declared primitives and make spawning methods for them
+   */
   loadPrimitives: function () {
     _.each(MathBox.Primitive.types, function (klass, type) {
       this[type] = function (options, animate) {
@@ -3918,6 +3996,13 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
 });
 
+/**
+ * Material manager. Generates custom ShaderMaterials that perform
+ * all the right transforms and stylings.
+ *
+ * Uses ShaderGraph to glue together basic snippets, which can be
+ * overridden on a section by section basis.
+ */
 MathBox.Materials = function (stage) {
   this.stage = stage;
   this.list = [];
@@ -3925,6 +4010,9 @@ MathBox.Materials = function (stage) {
 
 MathBox.Materials.prototype = {
 
+  /**
+   * Return a generic material.
+   */
   generic: function (options) {
     // Prepare new shadergraph factory.
     var factory = this.factory();
@@ -3948,6 +4036,9 @@ MathBox.Materials.prototype = {
     return this.finalize(factory, options);
   },
 
+  /**
+   * Insert the position snippet into a shadergraph factory.
+   */
   position: function (factory, options) {
     options = options || {};
 
@@ -3964,10 +4055,16 @@ MathBox.Materials.prototype = {
     return factory;
   },
 
+  /**
+   * New factory
+   */
   factory: function () {
     return new ShaderGraph.Factory();
   },
 
+  /**
+   * Finalize a shadergraph by adding on final transforms and a material shader.
+   */
   finalize: function (factory, options) {
     // Read out shaders
     options = options || {};
@@ -4020,6 +4117,9 @@ MathBox.Materials.prototype = {
     return material;
   },
 
+  /**
+   * Apply uniforms/attributes to a material
+   */
   apply: function (material, options, type) {
 
     var fields = material[type];
@@ -4047,10 +4147,16 @@ MathBox.Materials.prototype = {
 
   },
 
+  /**
+   * Add viewport transform to a shadergraph factory.
+   */
   viewport: function (factory, absolute) {
     this.stage.viewport().shader(factory, absolute);
   }//,
 };
+/**
+ * Helper to place equally spaced ticks in a range at sensible positions.
+ */
 MathBox.Ticks = function (min, max, n, scale, inclusive) {
   n = n || 10;
 
@@ -4058,7 +4164,7 @@ MathBox.Ticks = function (min, max, n, scale, inclusive) {
   var span = max - min;
   var ideal = span / n;
 
-  // Round to the floor'd power of ten.
+  // Round to the floor'd power of ten (or two, for pi-ticks).
   scale = scale || 1;
   var base = scale == π ? 2 : 10;
   var ref = scale * Math.pow(base, Math.floor(Math.log(ideal / scale) / Math.log(base)));
@@ -4073,7 +4179,6 @@ MathBox.Ticks = function (min, max, n, scale, inclusive) {
   }, ref);
 
   // Renormalize min/max onto aligned steps.
-  // Leave some room around the end for the arrow.
   var edge = +!inclusive;
   min = (Math.ceil(min / step) + edge) * step;
   max = (Math.floor(max / step) - edge) * step;
@@ -4141,6 +4246,12 @@ tQuery.World.register('mathBox', function (element, options) {
   return mathbox;
 });
 
+/**
+ * Script-based director.
+ *
+ * Applies operations to mathbox one by one by stepping forward.
+ * Can step backwards by automatically applying inverse operations.
+ */
 MathBox.Director = function (stage, script) {
   this._stage = stage;
   this.script = script;
@@ -4152,6 +4263,9 @@ MathBox.Director = function (stage, script) {
 
 MathBox.Director.prototype = {
 
+  /**
+   * Invert the given operation (which hasn't been applied yet).
+   */
   invert: function (op) {
     var stage = this._stage;
 
@@ -4200,6 +4314,9 @@ MathBox.Director.prototype = {
     return inverse;
   },
 
+  /**
+   * Apply the given script step.
+   */
   apply: function (step, rollback, instant) {
     var stage = this._stage;
 
@@ -4261,6 +4378,9 @@ MathBox.Director.prototype = {
     return this;
   },
 
+  /**
+   * Insert new script step after current step and execute.
+   */
   insert: function (script) {
     // Allow array of ops and single op
     if (script[0].constructor != Array) {
@@ -4275,6 +4395,9 @@ MathBox.Director.prototype = {
     return this;
   },
 
+  /**
+   * Go to the given step in the script.
+   */
   go: function (step, instant) {
     if (!this.script.length) return;
 
@@ -4285,6 +4408,9 @@ MathBox.Director.prototype = {
     while (step < this.step) { this.back(instant); }
   },
 
+  /**
+   * Helper to detect rapid skipping, so existing animations can be sped up.
+   */
   skipping: function () {
     var t = +new Date(), skip = false;
     if (t - this.lastCommand < 500) {
@@ -4295,32 +4421,26 @@ MathBox.Director.prototype = {
     return skip;
   },
 
+  /**
+   * Go one step forward.
+   */
   forward: function (instant) {
     if (this.step >= this.script.length) return;
 
     var step = this.script[this.step];
     var rollback = this.rollback[this.step] = [];
 
-    /*
-    console.trace();
-    console.profile('Director ' + this.step);
-    //*/
-
     this.apply(step, rollback, instant || this.skipping());
     this.step++;
-
-    /*
-    setTimeout(function () {
-      console.profileEnd();
-    }, 500)
-    //*/
-
 
     this.emit('go', this.step, 1);
 
     return this;
   },
 
+  /**
+   * Go one step backward.
+   */
   back: function (instant) {
     if (this.step <= 0) return;
 
@@ -4352,6 +4472,9 @@ _.each(MathBox.Stage.prototype, function (f, key) {
 
 MicroEvent.mixin(MathBox.Director);
 
+/**
+ * Object containing style attributes and their validators.
+ */
 MathBox.Style = function (options) {
   // Apply defaults
   var defaults = this.defaults();
@@ -4462,6 +4585,9 @@ MathBox.Style.prototype = {
 };
 
 MathBox.Attributes.mixin(MathBox.Style);
+/**
+ * Wrapper around ThreeBox camera to allow attribute animations.
+ */
 MathBox.CameraProxy = function (world, options) {
 
   this.set({
@@ -4560,6 +4686,9 @@ MathBox.Primitive.prototype = {
 
 MathBox.Attributes.mixin(MathBox.Primitive);
 MicroEvent.mixin(MathBox.Primitive);
+/**
+ * Generic curve, parametric or functional.
+ */
 MathBox.Curve = function (options) {
   // Allow inheritance constructor
   if (options === null) return;
@@ -4664,6 +4793,9 @@ MathBox.Curve.prototype = _.extend(new MathBox.Primitive(null), {
 });
 
 MathBox.Primitive.types.curve = MathBox.Curve;
+/**
+ * Bezier curve of order 1-3.
+ */
 MathBox.Bezier = function (options) {
   MathBox.Curve.call(this, options);
 };
@@ -4752,6 +4884,9 @@ MathBox.Bezier.prototype = _.extend(new MathBox.Curve(null), {
 });
 
 MathBox.Primitive.types.bezier = MathBox.Bezier;
+/**
+ * Axis with arrowhead and tick markers.
+ */
 MathBox.Axis = function (options) {
   // Allow inheritance constructor
   if (options === null) return;
@@ -4901,6 +5036,9 @@ MathBox.Axis.validateArgs = function (options) {
 };
 
 MathBox.Primitive.types.axis = MathBox.Axis;
+/**
+ * 2D grid of lines, based on tickmarks.
+ */
 MathBox.Grid = function (options) {
   // Allow inheritance constructor
   if (options === null) return;
@@ -5040,6 +5178,9 @@ MathBox.Grid.prototype = _.extend(new MathBox.Primitive(null), {
 });
 
 MathBox.Primitive.types.grid = MathBox.Grid;
+/**
+ * One or more vectors with given start and end points.
+ */
 MathBox.Vector = function (options) {
   // Allow inheritance constructor
   if (options === null) return;
@@ -5181,6 +5322,9 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 });
 
 MathBox.Primitive.types.vector = MathBox.Vector;
+/**
+ * Generic surface, parametric or functional.
+ */
 MathBox.Surface = function (options) {
   // Allow inheritance constructor
   if (options === null) return;
@@ -5311,6 +5455,9 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
 });
 
 MathBox.Primitive.types.surface = MathBox.Surface;
+/**
+ * Bezier surface of order 3.
+ */
 MathBox.BezierSurface = function (options) {
   this.matrixX = new THREE.Matrix4();
   this.matrixY = new THREE.Matrix4();
@@ -5576,6 +5723,9 @@ MathBox.Renderable.prototype = {
 };
 
 MathBox.Attributes.mixin(MathBox.Renderable);
+/**
+ * Generic renderable of vertices for points/lines/surfaces.
+ */
 MathBox.Renderable.Mesh = function (points, options, style) {
   this.points = points;
 
@@ -5649,6 +5799,9 @@ MathBox.Renderable.Mesh.prototype = _.extend(new MathBox.Renderable(null), {
   }//,
 
 });
+/**
+ * Arrowhead, constant screen-space size.
+ */
 MathBox.Renderable.ArrowHead = function (from, to, options, style) {
   this.from = from;
   this.to = to;
@@ -5748,6 +5901,9 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
 
 });
 
+/**
+ * Tickmarks on an axis, constant screen space size.
+ */
 MathBox.Renderable.Ticks = function (points, signs, epsilon, options, style) {
   this.points = points;
   this.signs = signs;
@@ -5829,6 +5985,9 @@ MathBox.Renderable.Ticks.prototype = _.extend(new MathBox.Renderable(null), {
   }//,
 
 });
+/**
+ * Generic viewport base class
+ */
 MathBox.Viewport = function (options) {
   if (options === null) return;
 
@@ -6021,6 +6180,18 @@ MathBox.ViewportCartesian.prototype = _.extend(new MathBox.Viewport(null), {
 MathBox.Attributes.mixin(MathBox.Viewport);
 
 MathBox.Viewport.types.cartesian = MathBox.ViewportCartesian;
+/**
+ * Cartesian to polar viewport transform.
+ *
+ * To animate the transition, the origin of the polar coordinate grid (the focus) is moved
+ * from infinity out to 0. In doing so, grid lines in the X direction bend smoothly from
+ * straight lines (circles of infinite radius) into circular arcs, while grid lines in the Y
+ * direction transition from being parallel (meeting at infinity) to crossing at the origin.
+ *
+ * The trickiest part is the correction for non-square aspect ratios. Because the scale in
+ * the radial direction is entirely arbitrary, the 'circles' are actually ellipses in
+ * math-space that are squished back into circles in world-space.
+ */
 MathBox.ViewportPolar = function (options) {
   var _super = MathBox.ViewportCartesian;
   _super.call(this, options);
@@ -6138,7 +6309,9 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         sy = s[1],
         sz = s[2];
 
-    // Adjust viewport for polar.
+    // Adjust viewport range for polar transform.
+    // As the viewport goes polar, the X-range is interpolated to the Y-range instead,
+    // creating a perfectly circular viewport.
     var fdx = dx+(dy-dx)*alpha;
     var sdx = fdx/sx, sdy = dy/sy;
     aspect = sdx/sdy;
@@ -6190,6 +6363,18 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
 MathBox.Attributes.mixin(MathBox.Viewport);
 
 MathBox.Viewport.types.polar = MathBox.ViewportPolar;
+/**
+ * Cartesian to spherical viewport transform.
+ *
+ * To animate the transition, the origin of the spherical coordinate grid (the focus) is moved
+ * from infinity out to 0. In doing so, grid lines in the X/Y direction bend smoothly from
+ * straight lines (circles of infinite radius) into circular arcs, while grid lines in the Z
+ * direction transition from being parallel (meeting at infinity) to crossing at the origin.
+ *
+ * Like the polar viewport, aspect ratio correction is paramount to making this look good.
+ * In the X/Z plane, the transform matches the Polar viewport transform.
+ * In the Y direction, additional aspect ratio corrections are required.
+ */
 MathBox.ViewportSphere = function (options) {
   var _super = MathBox.ViewportCartesian;
   _super.call(this, options);
@@ -6310,14 +6495,19 @@ MathBox.ViewportSphere.prototype = _.extend(new MathBox.ViewportCartesian(null),
         sz = s[2];
 
     // Adjust viewport for sphere.
+    // As the viewport goes spherical, the X/Y-ranges are interpolated to the Z-range,
+    // creating a perfectly spherical viewport.
     var fdx = dx+(dz-dx)*alpha;
     var fdy = dy+(dz-dy)*alpha;
     var sdx = fdx/sx,
         sdy = fdy/sy,
         sdz = dz/sz;
-    aspectX = sdx/sdz,
-    aspectY = sdy/sdz/aspectX,
-    aspectZ = dy/dx*sx/sy*2,
+    aspectX = sdx/sdz, // First fix X aspect to match Z
+    aspectY = sdy/sdz/aspectX, // Then fix Y aspect
+
+    // Scale Y coordinates before transforming, but cap at aspectY/alpha to prevent from poking through the poles mid-transform.
+    aspectZ = dy/dx*sx/sy*2, // Factor of 2 due to the fact that in the Y direction we only go 180º from pole to pole.
+    // This makes more sense if you look at how the vertex shader is implemented.
      yScale = Math.min(aspectY / alpha, 1 + (aspectZ - 1) * alpha);
 
     // Forward transform

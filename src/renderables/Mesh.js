@@ -1,3 +1,6 @@
+/**
+ * Generic renderable of vertices for points/lines/surfaces.
+ */
 MathBox.Renderable.Mesh = function (points, options, style) {
   this.points = points;
 

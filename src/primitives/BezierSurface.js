@@ -1,3 +1,6 @@
+/**
+ * Bezier surface of order 3.
+ */
 MathBox.BezierSurface = function (options) {
   this.matrixX = new THREE.Matrix4();
   this.matrixY = new THREE.Matrix4();

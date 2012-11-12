@@ -1,9 +1,17 @@
+/**
+ * Attribute animator. Works on any object with the Attributes.js mixin.
+ *
+ * Requires manual synchronization by calling animator.update().
+ */
 MathBox.Animator = function () {
   this.active = [];
 };
 
 MathBox.Animator.prototype = {
 
+  /**
+   * Return the final state of an object after all currently queued animations have run their course.
+   */
   finalState: function (object) {
     var state = _.extend({}, object.get());
     if (object.__queue) {
@@ -18,6 +26,9 @@ MathBox.Animator.prototype = {
     return state;
   },
 
+  /**
+   * Attach animator to an object.
+   */
   attach: function (object) {
     if (object.__queue) return;
     if (!object.__attributes) throw "Cannot attach to object without attributes";
@@ -54,6 +65,9 @@ MathBox.Animator.prototype = {
     object.__animations = 0;
   },
 
+  /**
+   * Hurry all animations on an object.
+   */
   hurry: function (object, keys, limit) {
     limit = limit || 300;
 
@@ -70,6 +84,9 @@ MathBox.Animator.prototype = {
     }.bind(this));
   },
 
+  /**
+   * Stop all animations on an object.
+   */
   stop: function (object, keys) {
     // Dequeue all animations, applying instantly.
     _.each(keys || object.__queue, function (queue, key) {
@@ -79,6 +96,9 @@ MathBox.Animator.prototype = {
     }.bind(this));
   },
 
+  /**
+   * Animate a set of attributes on an object.
+   */
   animate: function (object, attributes, options) {
     var defaults = {
       duration: 300//,
@@ -118,6 +138,9 @@ MathBox.Animator.prototype = {
     }.bind(this));
   },
 
+  /**
+   * Remove current animation on an object attribute.
+   */
   dequeue: function (object, key, apply) {
 
     // Check if key is animated
@@ -139,6 +162,9 @@ MathBox.Animator.prototype = {
     }
   },
 
+  /**
+   * Update all currently running animations.
+   */
   update: function () {
     _.each(this.active, function (object) {
       _.each(object.__queue, function update(queue, key) {
@@ -160,6 +186,9 @@ MathBox.Animator.prototype = {
   }//,
 }
 
+/**
+ * Non-animation that just adds a delay.
+ */
 MathBox.Animator.Delay = function (object, key, duration) {
   this.object = object;
   this.key = key;
@@ -193,6 +222,9 @@ MathBox.Animator.Delay.prototype = {
   }//,
 }
 
+/**
+ * Animation on a single attribute.
+ */
 MathBox.Animator.Animation = function (object, key, value, duration, callback, ease) {
   this.object = object;
   this.key = key;
@@ -224,6 +256,7 @@ MathBox.Animator.Animation.prototype = {
     var key = this.key;
     var ease = this.ease;
 
+    // Calculate animation progress / fraction.
     var fraction;
     if (this.duration > 0) {
       fraction = Math.min(1, (+new Date() - this.start) / (this.duration || 1));
@@ -233,6 +266,7 @@ MathBox.Animator.Animation.prototype = {
     }
     this.fraction = fraction;
 
+    // Simple easing support.
     var rolloff;
     switch (ease) {
       case 'in':
@@ -246,11 +280,14 @@ MathBox.Animator.Animation.prototype = {
         break;
     }
 
+    // Linear interpolation
     function lerp(from, to) {
       return from + (to - from) * rolloff;
     }
 
+    // Interpolate between two arbitrary values/objects.
     function process(from, to) {
+
       // Handle default cases.
       if (to === undefined) {
         to = from;
@@ -259,11 +296,13 @@ MathBox.Animator.Animation.prototype = {
         return from;
       }
 
+      // Sanity type check.
       if (typeof from != typeof to) {
         console.log(object, key)
         throw "Data type mismatch between from/to values in animator. "+ key +': '+ from + ' ('+ from.constructor +')' + ", " + to + "("+ to.constructor +")";
       }
 
+      // Type-specific behavior.
       var out;
       switch (typeof to) {
         default:

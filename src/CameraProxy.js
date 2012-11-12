@@ -1,3 +1,6 @@
+/**
+ * Wrapper around ThreeBox camera to allow attribute animations.
+ */
 MathBox.CameraProxy = function (world, options) {
 
   this.set({

@@ -1,3 +1,15 @@
+/**
+ * Cartesian to polar viewport transform.
+ *
+ * To animate the transition, the origin of the polar coordinate grid (the focus) is moved
+ * from infinity out to 0. In doing so, grid lines in the X direction bend smoothly from
+ * straight lines (circles of infinite radius) into circular arcs, while grid lines in the Y
+ * direction transition from being parallel (meeting at infinity) to crossing at the origin.
+ *
+ * The trickiest part is the correction for non-square aspect ratios. Because the scale in
+ * the radial direction is entirely arbitrary, the 'circles' are actually ellipses in
+ * math-space that are squished back into circles in world-space.
+ */
 MathBox.ViewportPolar = function (options) {
   var _super = MathBox.ViewportCartesian;
   _super.call(this, options);
@@ -115,7 +127,9 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         sy = s[1],
         sz = s[2];
 
-    // Adjust viewport for polar.
+    // Adjust viewport range for polar transform.
+    // As the viewport goes polar, the X-range is interpolated to the Y-range instead,
+    // creating a perfectly circular viewport.
     var fdx = dx+(dy-dx)*alpha;
     var sdx = fdx/sx, sdy = dy/sy;
     aspect = sdx/sdy;

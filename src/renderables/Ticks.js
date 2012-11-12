@@ -1,3 +1,6 @@
+/**
+ * Tickmarks on an axis, constant screen space size.
+ */
 MathBox.Renderable.Ticks = function (points, signs, epsilon, options, style) {
   this.points = points;
   this.signs = signs;

@@ -1,3 +1,10 @@
+/**
+ * Material manager. Generates custom ShaderMaterials that perform
+ * all the right transforms and stylings.
+ *
+ * Uses ShaderGraph to glue together basic snippets, which can be
+ * overridden on a section by section basis.
+ */
 MathBox.Materials = function (stage) {
   this.stage = stage;
   this.list = [];
@@ -5,6 +12,9 @@ MathBox.Materials = function (stage) {
 
 MathBox.Materials.prototype = {
 
+  /**
+   * Return a generic material.
+   */
   generic: function (options) {
     // Prepare new shadergraph factory.
     var factory = this.factory();
@@ -28,6 +38,9 @@ MathBox.Materials.prototype = {
     return this.finalize(factory, options);
   },
 
+  /**
+   * Insert the position snippet into a shadergraph factory.
+   */
   position: function (factory, options) {
     options = options || {};
 
@@ -44,10 +57,16 @@ MathBox.Materials.prototype = {
     return factory;
   },
 
+  /**
+   * New factory
+   */
   factory: function () {
     return new ShaderGraph.Factory();
   },
 
+  /**
+   * Finalize a shadergraph by adding on final transforms and a material shader.
+   */
   finalize: function (factory, options) {
     // Read out shaders
     options = options || {};
@@ -100,6 +119,9 @@ MathBox.Materials.prototype = {
     return material;
   },
 
+  /**
+   * Apply uniforms/attributes to a material
+   */
   apply: function (material, options, type) {
 
     var fields = material[type];
@@ -127,6 +149,9 @@ MathBox.Materials.prototype = {
 
   },
 
+  /**
+   * Add viewport transform to a shadergraph factory.
+   */
   viewport: function (factory, absolute) {
     this.stage.viewport().shader(factory, absolute);
   }//,

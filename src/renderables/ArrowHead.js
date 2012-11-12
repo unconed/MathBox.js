@@ -1,3 +1,6 @@
+/**
+ * Arrowhead, constant screen-space size.
+ */
 MathBox.Renderable.ArrowHead = function (from, to, options, style) {
   this.from = from;
   this.to = to;

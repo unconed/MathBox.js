@@ -1,3 +1,6 @@
+/**
+ * Generic surface, parametric or functional.
+ */
 MathBox.Surface = function (options) {
   // Allow inheritance constructor
   if (options === null) return;

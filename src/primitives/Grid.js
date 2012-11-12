@@ -1,3 +1,6 @@
+/**
+ * 2D grid of lines, based on tickmarks.
+ */
 MathBox.Grid = function (options) {
   // Allow inheritance constructor
   if (options === null) return;

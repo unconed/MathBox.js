@@ -1,3 +1,6 @@
+/**
+ * Generic curve, parametric or functional.
+ */
 MathBox.Curve = function (options) {
   // Allow inheritance constructor
   if (options === null) return;

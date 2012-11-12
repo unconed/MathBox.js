@@ -1,3 +1,9 @@
+/**
+ * Script-based director.
+ *
+ * Applies operations to mathbox one by one by stepping forward.
+ * Can step backwards by automatically applying inverse operations.
+ */
 MathBox.Director = function (stage, script) {
   this._stage = stage;
   this.script = script;
@@ -9,6 +15,9 @@ MathBox.Director = function (stage, script) {
 
 MathBox.Director.prototype = {
 
+  /**
+   * Invert the given operation (which hasn't been applied yet).
+   */
   invert: function (op) {
     var stage = this._stage;
 
@@ -57,6 +66,9 @@ MathBox.Director.prototype = {
     return inverse;
   },
 
+  /**
+   * Apply the given script step.
+   */
   apply: function (step, rollback, instant) {
     var stage = this._stage;
 
@@ -118,6 +130,9 @@ MathBox.Director.prototype = {
     return this;
   },
 
+  /**
+   * Insert new script step after current step and execute.
+   */
   insert: function (script) {
     // Allow array of ops and single op
     if (script[0].constructor != Array) {
@@ -132,6 +147,9 @@ MathBox.Director.prototype = {
     return this;
   },
 
+  /**
+   * Go to the given step in the script.
+   */
   go: function (step, instant) {
     if (!this.script.length) return;
 
@@ -142,6 +160,9 @@ MathBox.Director.prototype = {
     while (step < this.step) { this.back(instant); }
   },
 
+  /**
+   * Helper to detect rapid skipping, so existing animations can be sped up.
+   */
   skipping: function () {
     var t = +new Date(), skip = false;
     if (t - this.lastCommand < 500) {
@@ -152,32 +173,26 @@ MathBox.Director.prototype = {
     return skip;
   },
 
+  /**
+   * Go one step forward.
+   */
   forward: function (instant) {
     if (this.step >= this.script.length) return;
 
     var step = this.script[this.step];
     var rollback = this.rollback[this.step] = [];
 
-    /*
-    console.trace();
-    console.profile('Director ' + this.step);
-    //*/
-
     this.apply(step, rollback, instant || this.skipping());
     this.step++;
-
-    /*
-    setTimeout(function () {
-      console.profileEnd();
-    }, 500)
-    //*/
-
 
     this.emit('go', this.step, 1);
 
     return this;
   },
 
+  /**
+   * Go one step backward.
+   */
   back: function (instant) {
     if (this.step <= 0) return;
 

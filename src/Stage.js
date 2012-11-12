@@ -146,6 +146,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     }
   },
 
+  /**
+   * Add primitive to stage, instantiate its renderables.
+   */
   _add: function (primitive) {
     var materials = this.materials;
 
@@ -162,6 +165,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     }.bind(this));
   },
 
+  /**
+   * Remove primitive from stage, remove its renderables.
+   */
   _remove: function (primitive) {
     if (this.primitives.indexOf(primitive) == -1) return;
 
@@ -177,10 +183,11 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
   },
 
-  /**
-   * Primitive manipulation
-   */
+  ///// Primitive manipulation //////////////
 
+  /**
+   * Select primitives by type or ID.
+   */
   select: function (selector, includeDead) {
     var out = [];
 
@@ -213,7 +220,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         return out;
       }
 
-      // Parse css-like selector: #id, type, type[index]
+      // Parse css-like selector: #id, type
       var match = selector.match(/^\s*#([a-zA-Z0-9_-]+)|([a-zA-Z0-9_-]+)?\s*$/);
       if (!match) return [];
 
@@ -230,6 +237,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       }
       else {
 
+        // Special singletons
         if (type == 'camera') {
           return this.cameraProxy && [this.cameraProxy] || [];
         }
@@ -238,6 +246,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
           return [this.viewport()];
         }
 
+        // Declared primitive types
         if (type) {
           _.each(this.primitives, function (primitive) {
             if ((includeDead || !primitive.removed) && primitive.type() == type) {
@@ -259,6 +268,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     return out;
   },
 
+  /**
+   * Set properties on primitives.
+   */
   set: function (selector, options) {
     options = this.extractStyle(options);
     _.each(this.select(selector), function (primitive) {
@@ -266,6 +278,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     });
   },
 
+  /**
+   * Get (finalized) properties of a primitive.
+   */
   get: function (selector) {
     var animator = this.animator;
 
@@ -282,8 +297,10 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     return out;
   },
 
+  ////////// Primitive animation ////////////////////////
+
   /**
-   * Primitive animation
+   * Set default transition duration
    */
   transition: function (duration) {
     if (duration !== undefined) {
@@ -293,6 +310,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     return this.duration;
   },
 
+  /**
+   * Resolve animation options
+   */
   animateOptions: function (animate, force) {
     var auto = this.duration;
     if (animate === true) animate = {};
@@ -304,6 +324,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     }
   },
 
+  /**
+   * Animate primitives to give state.
+   */
   animate: function (selector, options, animate) {
     var animator = this.animator;
 
@@ -323,6 +346,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     });
   },
 
+  /**
+   * Hurry primitives currently being animated.
+   */
   hurry: function (selector, keys, limit) {
     var animator = this.animator;
 
@@ -332,6 +358,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     });
   },
 
+  /**
+   * Stop animations on primitives
+   */
   halt: function (selector, keys) {
     var animator = this.animator;
 
@@ -341,10 +370,13 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     });
   },
 
-  // Get/set viewport
+  /**
+   * Change properties of viewport
+   */
   viewport: function (viewport) {
     if (viewport !== undefined) {
       if (!this._viewport || (viewport.type && viewport.type != this.options.viewport.type)) {
+        // If changing viewport type, renderables need to be re-instantiated to regenerate shaders.
         this._viewport = MathBox.Viewport.make(viewport);
         var primitives = this.primitives.slice(),
             stage = this;
@@ -354,6 +386,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         })
       }
       else {
+        // Set properties directly
         this._viewport.set(viewport);
       }
       this.options.viewport = this._viewport.get();
@@ -387,11 +420,11 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     return this._world;
   },
 
-  /**
-   * Primitive constructors
-   */
+  //////////// Primitive constructors ////////////////
 
-  // Extract style properties from flattened options and put into style subkey for convenience.
+  /**
+   * Extract style properties from flattened options and put into style subkey for convenience.
+   */
   extractStyle: function (options) {
     var styles = MathBox.Style.prototype.defaults();
     var out = null;
@@ -408,6 +441,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     return options;
   },
 
+  /**
+   * Spawn primitive by type
+   */
   spawn: function (selector, options, animate) {
     if (MathBox.Primitive.types[selector]) {
       this[selector](options, animate);
@@ -415,6 +451,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     }
   },
 
+  /**
+   * Load all declared primitives and make spawning methods for them
+   */
   loadPrimitives: function () {
     _.each(MathBox.Primitive.types, function (klass, type) {
       this[type] = function (options, animate) {
