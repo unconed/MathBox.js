@@ -6398,7 +6398,7 @@ ThreeBox.OrbitControls.prototype = {
       this.drag = false;
     }).bind(this);
 
-    this._mouseMove = (function () {
+    this._mouseMove = (function (event) {
       if (that.drag) {
         var relative = { x: event.pageX - that.origin.x, y: event.pageY - that.origin.y },
             delta = { x: event.pageX - that.lastHover.x, y: event.pageY - that.lastHover.y };
@@ -7237,7 +7237,7 @@ window.ShaderGraph = {};
 // Fetch shader from <script> tag by id
 ShaderGraph.getShader = function (id) {
   var elem = document.getElementById(id);
-  return elem && elem.innerText || id;
+  return elem && (elem.innerText || elem.textContent) || id;
 };(function ($) {
 
 /**
@@ -8410,7 +8410,7 @@ window.mathBox = function (element, options) {
 // Fetch shader from <script> tag by id
 MathBox.getShader = function (id) {
   var elem = document.getElementById(id);
-  return elem && elem.innerText || id;
+  return elem && (elem.innerText || elem.textContent) || id;
 };
 
 Math.sign = function (x) {
