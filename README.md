@@ -9,7 +9,7 @@ MathBox can be operated manually using a tQuery-like API, or used in presentatio
 
 MathBox was initially created for the conference talk "Making Things with Maths" at [Full Frontal 2012](http://2012.full-frontal.org) and is still a work in progress. There are a couple of important functionality gaps, such as a complete lack of axis and point labelling and inability to re-use styles consistently.
 
-Browser support is currently limited to Google Chrome, which should be rectified as soon as I manage to catch up on sleep.
+I've only tested thoroughly in Google Chrome, but Firefox seems to work well, with Opera at 90% functionality.
 
 * * *
 
