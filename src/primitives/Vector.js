@@ -20,7 +20,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
       n: 1,
       data: null,
       expression: function () { return 0; },
-      live: false,
+      live: true,
       style: {},
       size: .07//,
     };
@@ -36,7 +36,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
   adjust: function (viewport) {
     var options = this.get();
-    // Vector foreshortening requires live
+    // Bug: Vector foreshortening requires live to be always-on
     (true || options.live) && this.calculate(viewport);
   },
 

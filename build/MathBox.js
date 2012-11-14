@@ -4704,7 +4704,7 @@ MathBox.Curve.prototype = _.extend(new MathBox.Primitive(null), {
       domain: [0, 1],
       data: null,
       expression: function () { return 0; },
-      live: false,
+      live: true,
       points: false,
       line: true,
       style: {}//,
@@ -4809,7 +4809,7 @@ MathBox.Bezier.prototype = _.extend(new MathBox.Curve(null), {
       data: null,
       order: 3,
       expression: function () { return 0; },
-      live: false,
+      live: true,
       points: false,
       line: true,
       style: {}//,
@@ -5200,7 +5200,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
       n: 1,
       data: null,
       expression: function () { return 0; },
-      live: false,
+      live: true,
       style: {},
       size: .07//,
     };
@@ -5216,7 +5216,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
   adjust: function (viewport) {
     var options = this.get();
-    // Vector foreshortening requires live
+    // Bug: Vector foreshortening requires live to be always-on
     (true || options.live) && this.calculate(viewport);
   },
 
@@ -5340,7 +5340,7 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       domain: [[0, 1], [0, 1]],
       data: null,
       expression: function () { return 0; },
-      live: false,
+      live: true,
       points: false,
       line: false,
       mesh: true,
@@ -5481,7 +5481,7 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
       data: null,
       order: 3,
       expression: function () { return 0; },
-      live: false,
+      live: true,
       points: false,
       line: false,
       mesh: true,

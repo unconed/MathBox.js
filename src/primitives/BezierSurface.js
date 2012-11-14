@@ -24,7 +24,7 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
       data: null,
       order: 3,
       expression: function () { return 0; },
-      live: false,
+      live: true,
       points: false,
       line: false,
       mesh: true,

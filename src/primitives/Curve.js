@@ -16,7 +16,7 @@ MathBox.Curve.prototype = _.extend(new MathBox.Primitive(null), {
       domain: [0, 1],
       data: null,
       expression: function () { return 0; },
-      live: false,
+      live: true,
       points: false,
       line: true,
       style: {}//,

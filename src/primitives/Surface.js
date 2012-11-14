@@ -16,7 +16,7 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       domain: [[0, 1], [0, 1]],
       data: null,
       expression: function () { return 0; },
-      live: false,
+      live: true,
       points: false,
       line: false,
       mesh: true,

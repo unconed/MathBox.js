@@ -14,7 +14,7 @@ MathBox.Bezier.prototype = _.extend(new MathBox.Curve(null), {
       data: null,
       order: 3,
       expression: function () { return 0; },
-      live: false,
+      live: true,
       points: false,
       line: true,
       style: {}//,
