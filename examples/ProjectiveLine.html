@@ -174,7 +174,9 @@
         mathbox.set('camera', { phi: +new Date() * .0003 });
       });
 
-      document.getElementById('info').style.opacity = '0';
+      setTimeout(function () {
+        document.getElementById('info').style.opacity = '0';
+      }, 0);
     });
   });
   </script>
