@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Example: Intersection of 2D function in 3D.</title>
+
+  <!--
+    This example shows how you can use the polar viewport + a mapping function to render functions on the real projective line.
+  -->
+
+  <style type="text/css" media="screen">
+    html, body { height: 100%; }
+    body { margin: 0; padding: 0 }
+    canvas { display: block }
+  </style>
+
+  <script type="text/javascript" charset="utf-8" src="../vendor/domready.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
+
+  <script type="text/javascript" charset="utf-8">
+    DomReady.ready(function () {
+      if (location.href.match(/^file:/)) {
+        document.getElementById('info').innerHTML = "Sorry. This example does not work when accessed using file://. Please use an http:// host and try again.";
+      }
+    });
+  </script>
+
+  <style type="text/css" media="screen">
+    #info {
+      position: absolute;
+      left: 50%;
+      bottom: 50px;
+      z-index: 20;
+
+      width: 300px;
+      margin-left: -150px;
+
+      padding: 25px;
+      background: rgba(0, 0, 0, .3);
+      color: #fff;
+
+      font-family: "Lucida Grande", sans-serif;
+      font-size: 16px;
+      text-align: center;
+
+      border-radius: 3px;
+      text-shadow: 0px 1px 0px rgba(0, 0, 0, .4);
+    }
+    
+    #info kbd {
+      background: #ccc;
+      box-shadow: 0px 1px 1px rgba(0, 0, 0, .3);
+      border-radius: 3px;
+      padding: 3px;
+      margin: 3px;
+      
+      font-family: inherit;
+    }
+  </style>
+
+  <script type="text/javascript" charset="utf-8">
+  /**
+   * Bootstrap
+   */
+  DomReady.ready(function() {
+    ThreeBox.preload([
+      '../shaders/snippets.glsl.html',
+    ], function () {
+
+      // MathBox boilerplate
+      var mathbox = window.mathbox = mathBox({
+        cameraControls: true,
+        cursor:         true,
+        controlClass:   ThreeBox.OrbitControls,
+        elementResize:  true,
+        fullscreen:     true,
+        screenshot:     true,
+        stats:          false,
+        scale:          1,
+      }).start();
+
+      // Viewport camera/setup
+      mathbox
+        // Polar viewport
+        .viewport({
+          type: 'polar',
+          range: [[-1, 1], [-2, 5], [-1, 1]],
+          scale: [1, 1, 1],
+          polar: 0,
+        })
+        .camera({
+          orbit: 4,
+          phi: τ/4-.8,
+          theta: 1.1,
+        })
+        .transition(300)
+
+        // Surface function
+        .surface({
+          shaded: true,
+          domain: [[-1, 1], [-1, 1]],
+          n: [32, 32],
+          expression: surfaceFunc,
+        })
+
+      document.getElementById('info').style.opacity = '0';
+
+      // Animate viewport between polar and cartesian
+      mathbox.world().loop().hookPreRender(function () {
+        var t = +new Date() * .0003;
+        mathbox.set('viewport', { polar: Math.sin(t) * .5 + .5 });
+      });
+    });
+  });
+  </script>
+  
+  <script type="text/javascript" charset="utf-8">
+  /**
+   * Custom helpers
+   */
+
+  // Clock that starts as soon as it is first called (per id).
+  var clocks = {};
+  window.clock = function (id) {
+    if (!clocks[id]) clocks[id] = +new Date();
+    return (+new Date() - clocks[id]) * .001;
+  }
+
+  // Arbitrary function
+  function surfaceFunc(x, y) {
+
+    return [x, 3 + -1 + Math.cos(x*5) + Math.cos(y*5), y];
+  }
+
+  </script>
+
+</head>
+<body>
+  <div id="info"></div>
+</body>
+</html>

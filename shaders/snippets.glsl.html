@@ -6,9 +6,9 @@ uniform mat4 bezierSurfaceX;
 uniform mat4 bezierSurfaceY;
 uniform mat4 bezierSurfaceZ;
 
-varying vec3 vNormal;
+const float epsilon = 0.01;
 
-void bezierSurface3(out vec3 positionOut) {
+void bezierSurface3(out vec3 positionOut, out vec3 positionDUOut, out vec3 positionDVOut) {
   // uv  = tu,   tv
   // uv2 = tu^2, tv^2
   // uv3 = tu^3, tv^3
@@ -43,7 +43,9 @@ void bezierSurface3(out vec3 positionOut) {
   tV.y = dot(tu, bezierSurfaceY * dtv);
   tV.z = dot(tu, bezierSurfaceZ * dtv);
 
-  vNormal = normalMatrix * normalize(cross(tV, tU));
+  // output adjacent positions in DU / DV for determining normal post-transform.
+  positionDUOut = positionOut + tU * epsilon;
+  positionDVOut = positionOut + tV * epsilon;
 }
 </script>
 
@@ -240,7 +242,31 @@ uniform float zIndex;
 
 void projectToView(in vec3 positionIn, out vec4 positionOut, out vec3 viewPositionOut) {
   vec4 worldPosition = modelViewMatrix * vec4(positionIn, 1.0);
+
   viewPositionOut = -worldPosition.xyz;
+
+  positionOut = projectionMatrix * worldPosition;
+  positionOut.z -= zIndex * .00001;
+}
+
+</script>
+
+<script type="application/x-glsl" id="projectToViewDUDV">
+// Vertex shader: project points + DU/DV to view (and apply zIndex bias).
+uniform float zIndex;
+varying vec3 vNormal;
+
+void projectToView(in vec3 positionIn, in vec3 positionDUIn, in vec3 positionDVIn, out vec4 positionOut, out vec3 viewPositionOut) {
+  vec4 worldPosition = modelViewMatrix * vec4(positionIn, 1.0);
+  vec4 worldPositionDU = modelViewMatrix * vec4(positionDUIn, 1.0);
+  vec4 worldPositionDV = modelViewMatrix * vec4(positionDVIn, 1.0);
+
+  vec3 du = worldPositionDU.xyz - worldPosition.xyz;
+  vec3 dv = worldPositionDV.xyz - worldPosition.xyz;
+  vNormal = normalize(cross(dv, du));
+
+  viewPositionOut = -worldPosition.xyz;
+
   positionOut = projectionMatrix * worldPosition;
   positionOut.z -= zIndex * .00001;
 }
@@ -254,13 +280,15 @@ void getPosition(out vec3 positionOut) {
 }
 </script>
 
-<script type="application/x-glsl" id="getPositionNormal">
-// Vertex shader: read three.js vertex position attribute and calculate screen-space normal
-varying vec3 vNormal;
+<script type="application/x-glsl" id="getPositionDUDV">
+attribute vec3 positionDU;
+attribute vec3 positionDV;
 
-void getPositionNormal(out vec3 positionOut) {
-  vNormal = normalMatrix * normal;
+// Vertex shader: read three.js vertex position attribute
+void getPosition(out vec3 positionOut, out vec3 positionDUOut, out vec3 positionDVOut) {
   positionOut = position;
+  positionDUOut = positionDU;
+  positionDVOut = positionDV;
 }
 </script>
 

@@ -171,20 +171,7 @@
 
       // Rotate camera continuously
       mathbox.world().loop().hookPreRender(function () {
-        mathbox.set('camera', { phi: +new Date() * .0001 });
-      });
-
-      // Director
-      var director = window.director = new MathBox.Director(mathbox, script);
-
-      // Arrow controls
-      // Controls for stand-alone
-      window.addEventListener('keydown', function (e) {
-        if (e.keyCode == 38 || e.keyCode == 37) director.back();
-        else if (e.keyCode == 40 || e.keyCode == 39) director.forward();
-        else {
-          return;
-        }
+        mathbox.set('camera', { phi: +new Date() * .0003 });
       });
 
       document.getElementById('info').style.opacity = '0';
@@ -226,9 +213,6 @@
 
     return [π/2*map(y) + t, x*.25 + .25, i];
   }
-
-  // Script
-  var script = [];
 
   </script>
 

@@ -5,7 +5,7 @@
   <title>MathBox - Example: Bezier Surface</title>
 
   <!--
-    This example shows how a bicubic bezier surface is made, using lots of custom expressions and clocks.
+    This example shows how a bicubic bezier surface is made, using lots of custom expressions and clocks. Also shows how to use the director class.
   -->
 
   <style type="text/css" media="screen">
@@ -445,6 +445,7 @@
         mesh: true,
         line: false,
         live: true,
+        shaded: true,
         expression: surface,
       }],
       ['add', 'bezierSurface', {
@@ -457,6 +458,7 @@
         live: true,
         color: 0x000000,
         opacity: .1,
+        shaded: false,
         expression: shadow,
       }],
       ['add', 'bezierSurface', {
@@ -471,6 +473,7 @@
         color: 0x2060E0,
         lineWidth: 3,
         opacity: 1,
+        shaded: true,
         expression: surface,
       }],
       ['animate', '#result', {

@@ -48,6 +48,7 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
         data = options.data,
         style = options.style,
         order = options.order,
+        shaded = options.shaded,
         n = options.n;
 
     if (typeof n == 'number') {
@@ -133,10 +134,28 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
       uniforms: uniforms,
       shaders: {
         position: function (f, m) {
-          f
-            .snippet('bezierSurface' + order)
-            .snippet('mathTransform');
-          m.viewport(f);
+          if (shaded) {
+            f.snippet('bezierSurface' + order)
+
+            // Transform position + DU/DV
+            f.group()
+              f.snippet('mathTransform');
+              m.viewport(f);
+            f.next();
+              f.snippet('mathTransform');
+              m.viewport(f);
+            f.next();
+              f.snippet('mathTransform');
+              m.viewport(f);
+            f.combine();
+          }
+          else {
+            // Transform just position
+            f
+              .snippet('bezierSurface' + order)
+              .snippet('mathTransform');
+            m.viewport(f);
+          }
         },
       },
     };

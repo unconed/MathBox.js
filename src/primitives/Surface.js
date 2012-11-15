@@ -78,6 +78,15 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       dynamic: options.live,
     }, style);
 
+    // Prepare tangent arrays for shading
+    if (options.shaded) {
+      var tangents = this.tangents = [[], []];
+      _.loop(n[0] * n[1], function () {
+        tangents[0].push(new THREE.Vector3());
+        tangents[1].push(new THREE.Vector3());
+      });
+    }
+
     this.calculate();
   },
 
@@ -85,11 +94,13 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
 
   calculate: function () {
     var vertices = this.vertices,
+        tangents = this.tangents,
         options = this.get(),
         data = options.data,
         domain = options.domain,
         style = options.style,
-        n = options.n;
+        n = options.n,
+        shaded = options.shaded;
 
     if (typeof n == 'number') {
       n = [n, n];
@@ -100,6 +111,7 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
         stepX = (domain[0][1] - x) / (n[0] - 1),
         stepY = (domain[1][1] - y) / (n[1] - 1);
 
+    // Calculate positions of vertices
     var p, o = 0;
     _.loop(n[1], function (j) {
       x = domain[0][0];
@@ -125,6 +137,65 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       }.bind(this));
       y += stepY;
     }.bind(this));
+
+    // Calculate tangents for shading correctly after warping transforms
+    if (options.shaded) {
+      o = 0;
+      y = domain[1][0];
+
+      var stride = n[0],
+          epsilon = 0.01;
+
+      _.loop(n[1], function (j) {
+        x = domain[0][0];
+
+        var up = j ? j - 1 : 0,
+            down = Math.min(n[1] - 1, j + 1);
+
+        _.loop(n[0], function (i) {
+
+          var left = i ? i - 1 : 0,
+              right = Math.min(n[0] - 1, i + 1);
+
+          // Central differences
+          var v = vertices[i + j * stride];
+
+          /* high quality */
+          /*
+          tangents[0][o].sub(vertices[right + j * stride], vertices[left + j * stride]).multiplyScalar(epsilon).addSelf(v);
+          tangents[1][o].sub(vertices[i + down * stride], vertices[i + up * stride]).multiplyScalar(epsilon).addSelf(v);
+          */
+
+          /* low quality */
+          if (right == i) {
+            tangents[0][o].sub(v, vertices[left + j * stride], v).addSelf(v);
+          }
+          else {
+            tangents[0][o].copy(vertices[right + j * stride]);
+          }
+
+          if (down == j) {
+            tangents[1][o].sub(v, vertices[i + up * stride]).addSelf(v);
+          }
+          else {
+            tangents[1][o].copy(vertices[i + down * stride]);
+          }
+
+          x += stepX;
+          o++;
+        });
+        y += stepY;
+      });
+
+      this.line.set('attributes', {
+        positionDU: tangents[0],
+        positionDV: tangents[1],
+      });
+      this.mesh.set('attributes', {
+        positionDU: tangents[0],
+        positionDV: tangents[1],
+      });
+    }
 
   }//,
 

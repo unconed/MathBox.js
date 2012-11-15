@@ -30,7 +30,20 @@ MathBox.Materials.prototype = {
 
       // Apply viewport transform
       if (!options.absolute) {
-        this.viewport(factory);
+        if (options.shaded) {
+          // Viewport transform for position + DU/DV
+          factory.group();
+          this.viewport(factory);
+          factory.next();
+          this.viewport(factory);
+          factory.next();
+          this.viewport(factory);
+          factory.combine();
+        }
+        else {
+          // Viewport transform for position
+          this.viewport(factory);
+        }
       }
     }
 
@@ -45,14 +58,28 @@ MathBox.Materials.prototype = {
     options = options || {};
 
     // Default position snippet
-    var position = {
-      mesh: 'getPositionNormal',
-    }[options.type] || 'getPosition';
+    var position = options.shaded ? 'getPositionDUDV' : 'getPosition';
 
     // Fetch vertex position from three.js attributes
     factory
-      .snippet(position)
-      .snippet('mathTransform')
+      .snippet(position);
+
+    // Apply math transform
+    if (options.shaded) {
+      // Transform position + DU/DV offset positions
+      factory
+        .group()
+          .snippet('mathTransform')
+        .next()
+          .snippet('mathTransform')
+        .next()
+          .snippet('mathTransform')
+        .combine();
+    }
+    else {
+      // Transform just position
+      factory.snippet('mathTransform');
+    }
 
     return factory;
   },
@@ -73,8 +100,14 @@ MathBox.Materials.prototype = {
     var shaders = options.shaders || {};
 
     // Transform point to view.
-    factory
-      .snippet('projectToView')
+    if (options.shaded) {
+      factory
+        .snippet('projectToViewDUDV')
+    }
+    else {
+      factory
+        .snippet('projectToView')
+    }
 
     if (shaders.material) {
       // Override material shader
