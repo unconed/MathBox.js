@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Example: Projective Line Curve Thing</title>
+
+  <!--
+    This example shows how you can use the polar viewport + a mapping function to render functions on the real projective line.
+  -->
+
+  <style type="text/css" media="screen">
+    html, body { height: 100%; }
+    body { margin: 0; padding: 0 }
+    canvas { display: block }
+  </style>
+
+  <script type="text/javascript" charset="utf-8" src="../vendor/domready.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
+
+  <script type="text/javascript" charset="utf-8">
+    DomReady.ready(function () {
+      if (location.href.match(/^file:/)) {
+        document.getElementById('info').innerHTML = "Sorry. This example does not work when accessed using file://. Please use an http:// host and try again.";
+      }
+    });
+  </script>
+
+  <style type="text/css" media="screen">
+    #info {
+      position: absolute;
+      left: 50%;
+      bottom: 50px;
+      z-index: 20;
+
+      width: 300px;
+      margin-left: -150px;
+
+      padding: 25px;
+      background: rgba(0, 0, 0, .3);
+      color: #fff;
+
+      font-family: "Lucida Grande", sans-serif;
+      font-size: 16px;
+      text-align: center;
+
+      border-radius: 3px;
+      text-shadow: 0px 1px 0px rgba(0, 0, 0, .4);
+    }
+    
+    #info kbd {
+      background: #ccc;
+      box-shadow: 0px 1px 1px rgba(0, 0, 0, .3);
+      border-radius: 3px;
+      padding: 3px;
+      margin: 3px;
+      
+      font-family: inherit;
+    }
+  </style>
+
+  <script type="text/javascript" charset="utf-8">
+  /**
+   * Bootstrap
+   */
+  DomReady.ready(function() {
+    ThreeBox.preload([
+      '../shaders/snippets.glsl.html',
+    ], function () {
+
+      // MathBox boilerplate
+      var mathbox = window.mathbox = mathBox({
+        cameraControls: true,
+        cursor:         true,
+        controlClass:   ThreeBox.OrbitControls,
+        elementResize:  true,
+        fullscreen:     true,
+        screenshot:     true,
+        stats:          false,
+        scale:          1,
+      }).start();
+
+      // Viewport camera/setup
+      mathbox
+        // Polar viewport
+        .viewport({
+          type: 'polar',
+          range: [[-π, π], [-1, 1], [-4, 4]],
+          scale: [.8, .8, .8],
+          polar: 1,
+          rotation: [τ/4, 0, 0],
+        })
+        .camera({
+          orbit: 3.5,
+          phi: τ/4+.5,
+          theta: 0.1,
+        })
+        .transition(300)
+
+        // Animated curve
+        .curve({
+          domain: [-1, 1],
+          n: 512,
+          expression: rationalFunc,
+          lineWidth: 4,
+        })
+
+        // Manual conical grid lines
+        .curve({
+          n: 2,
+          domain: [-1, 1],
+          data: [[0, 0, -4], [0, .5, 4]],
+          color: 0xa0a0a0,
+          lineWidth: 1,
+        })
+        .curve({
+          n: 2,
+          domain: [-1, 1],
+          data: [[0, 0, -4], [.25*π, .5, 4]],
+          color: 0xa0a0a0,
+          lineWidth: 1,
+        })
+        .curve({
+          n: 2,
+          domain: [-1, 1],
+          data: [[0, 0, -4], [.5*π, .5, 4]],
+          color: 0xa0a0a0,
+          lineWidth: 1,
+        })
+        .curve({
+          n: 2,
+          domain: [-1, 1],
+          data: [[0, 0, -4], [.75*π, .5, 4]],
+          color: 0xa0a0a0,
+          lineWidth: 1,
+        })
+        .curve({
+          n: 2,
+          domain: [-1, 1],
+          data: [[0, 0, -4], [π, .5, 4]],
+          color: 0xa0a0a0,
+          lineWidth: 1,
+        })
+        .curve({
+          n: 2,
+          domain: [-1, 1],
+          data: [[0, 0, -4], [1.25*π, .5, 4]],
+          color: 0xa0a0a0,
+          lineWidth: 1,
+        })
+        .curve({
+          n: 2,
+          domain: [-1, 1],
+          data: [[0, 0, -4], [1.5*π, .5, 4]],
+          color: 0xa0a0a0,
+          lineWidth: 1,
+        })
+        .curve({
+          n: 2,
+          domain: [-1, 1],
+          data: [[0, 0, -4], [1.75*π, .5, 4]],
+          color: 0xa0a0a0,
+          lineWidth: 1,
+        })
+        .curve({
+          n: 48,
+          domain: [-π, π],
+          expression: function (x) { return [x, .5, 4]; },
+          color: 0xa0a0a0,
+          lineWidth: 1,
+        });
+
+      // Rotate camera continuously
+      mathbox.world().loop().hookPreRender(function () {
+        mathbox.set('camera', { phi: +new Date() * .0001 });
+      });
+
+      // Director
+      var director = window.director = new MathBox.Director(mathbox, script);
+
+      // Arrow controls
+      // Controls for stand-alone
+      window.addEventListener('keydown', function (e) {
+        if (e.keyCode == 38 || e.keyCode == 37) director.back();
+        else if (e.keyCode == 40 || e.keyCode == 39) director.forward();
+        else {
+          return;
+        }
+      });
+
+      document.getElementById('info').style.opacity = '0';
+    });
+  });
+  </script>
+  
+  <script type="text/javascript" charset="utf-8">
+  /**
+   * Custom helpers
+   */
+
+  // Clock that starts as soon as it is first called (per id).
+  var clocks = {};
+  window.clock = function (id) {
+    if (!clocks[id]) clocks[id] = +new Date();
+    return (+new Date() - clocks[id]) * .001;
+  }
+
+  // Map the real numbers onto a finite range
+  function map(x) {
+    if (Math.abs(x) < 1) return x;
+    if (x > 1) return 2 - 1/x;
+    return -2 - 1/x;
+  }
+
+  // Rational function with moving poles, squished into a cone
+  function rationalFunc(x) {
+    var poles = [];
+    var t = clock(1);
+
+    poles.push(Math.sin(t*.36+3) + 3);
+    poles.push(Math.sin(t*.71+5) + 2);
+    poles.push(Math.sin(t*1.13-8) - 1);
+    poles.push(Math.sin(t*0.87+1) - 3);
+
+    var y = 5, i = x*4;
+    _.each(poles, function (z) { y /= (i - z) });
+
+    return [π/2*map(y) + t, x*.25 + .25, i];
+  }
+
+  // Script
+  var script = [];
+
+  </script>
+
+</head>
+<body>
+  <div id="info"></div>
+</body>
+</html>
