@@ -1,5 +1,5 @@
-MathBox (undocumented, work in progress)
-==========
+MathBox
+=======
 
 ![MathBox](https://raw.github.com/unconed/MathBox.js/master/resources/example.png)
 
