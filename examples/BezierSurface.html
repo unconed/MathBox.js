@@ -99,6 +99,11 @@
       // Director
       var director = window.director = new MathBox.Director(mathbox, script);
 
+      // Hide info if iframed.
+      if (top != window) {
+        document.getElementById('info').style.opacity = '0';
+      }
+
       // Arrow controls
       // Controls for stand-alone
       window.addEventListener('keydown', function (e) {
