@@ -2,10 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>MathBox - Example: Surface warping with polar viewport.</title>
+  <title>MathBox - Example: Axis labeling.</title>
 
   <!--
-    This example shows how surfaces can warp under viewport transforms with correct shading.
+    This example shows labelling of axes.
   -->
 
   <style type="text/css" media="screen">
@@ -81,35 +81,37 @@
 
       // Viewport camera/setup
       mathbox
-        // Polar viewport
+        // Cartesian viewport
         .viewport({
-          type: 'polar',
-          range: [[-π, π], [-3, 6], [-1, 1]],
+          type: 'cartesian',
+          range: [[-4, 4], [-4, 4]],
           scale: [1, 1, 1],
-          polar: 0,
         })
         .camera({
-          orbit: 4,
-          phi: τ/4-.8,
-          theta: 1.1,
+          orbit: 3.5,
+          phi: τ/4,
+          theta: 0,
         })
         .transition(300)
 
-        // Surface function
-        .surface({
-          shaded: true,
-          domain: [[-π, π], [-1, 1]],
-          n: [48, 32],
-          expression: surfaceFunc,
+        // Number line
+        .axis({
+          axis: 0,
+          color: 0xa0a0a0,
+          lineWidth: 2,
+          size: .1,
+        })
+        .curve({
+          n: 2,
+          data: [[0, .2], [0, -.2]],
+          color: 0xa0a0a0,
+          points: false,
+          line: true,
+          lineWidth: 2,
         })
 
       document.getElementById('info').style.opacity = '0';
 
-      // Animate viewport between polar and cartesian
-      mathbox.world().loop().hookPreRender(function () {
-        var t = +new Date() * .0003;
-        mathbox.set('viewport', { polar: Math.sin(t) * .5 + .5 });
-      });
     });
   });
   </script>
@@ -128,8 +130,13 @@
 
   // Arbitrary function
   function surfaceFunc(x, y) {
+    return [x, 3 + -1 + Math.cos(x*5) + Math.cos(y*5), y];
+  }
 
-    return [x, 4 + -1 + Math.cos(x*2) + Math.cos(y*5), y];
+  // Horizontal slice
+  function sliceFunc(x, y) {
+    var t = clock(1);
+    return Math.sin(t) * .75 + 2;
   }
 
   </script>

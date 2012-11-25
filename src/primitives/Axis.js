@@ -15,19 +15,20 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       axis: 0,
       offset: [0, 0, 0],
       n: 2,
+      labels: false,
       ticks: 10,
       tickBase: 1,
       arrow: true,
       size: .07,
       style: {
         lineWidth: 4,
-        color: new THREE.Color(0x707070)//,
-      }//,
+        color: new THREE.Color(0x707070),
+      },
     };
   },
 
   renderables: function () {
-    return [ this.line, this.ticks, this.arrow ];
+    return [ this.line, this.ticks, this.arrow, this.labels ];
   },
 
   type: function () {
@@ -44,6 +45,7 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
         tickBase = options.tickBase,
         n = options.n,
         points = this.points,
+        anchorPoints = this.anchorPoints,
         tickPoints = this.tickPoints,
         tickSigns = this.tickSigns;
 
@@ -70,10 +72,12 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     // Show/hide arrow
     this.arrow.show(arrow);
 
+    // Prepare scale divisions
+    var scale = this.scale = MathBox.Ticks(min, max, ticks, tickBase, true);
+
     // Prepare tick marks range/scale.
     this.ticks.show(!!ticks);
     if (ticks) {
-      var scale = MathBox.Ticks(min, max, ticks, tickBase, true);
       var limit = Math.floor(tickPoints.length / 2);
       if (scale.length > limit) scale = scale.slice(0, limit);
 
@@ -85,9 +89,11 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       // Place uniformly spaced pairs of points for ticks.
       var p = [0, 0, 0], mn = 100, mx = -100;
       _.each(scale, function (x, i) {
-        i = i*2;
         p[axis] = x;
 
+        anchorPoints[i].set.apply(anchorPoints[i], p);
+
+        i = i*2;
         tickPoints[i].set.apply(tickPoints[i], p);
         tickPoints[i].addSelf(add);
         tickSigns[i] = 1;
@@ -115,14 +121,19 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
         size = options.size,
         ticks = options.ticks,
         style = this.style,
-        points = this.points = [],
-        tickPoints = this.tickPoints = [],
-        tickSigns = this.tickSigns = [],
-        epsilon = this.epsilon = new THREE.Vector3();
+        points = this.points = [], // Points for drawing lines
+        anchorPoints = this.anchorPoints = [], // Points for attaching labels
+        tickPoints = this.tickPoints = [], // Points for drawing ticks (doubled)
+        tickSigns = this.tickSigns = [], // Alternating signs for tick shader
+        epsilon = this.epsilon = new THREE.Vector3(),
+        anchorSpacer = this.anchorSpacer = new THREE.Vector3();
 
     // Prepare arrays of vertices.
     _.loop(n, function (x) {
       points.push(new THREE.Vector3());
+    });
+    _.loop(ticks * 4, function (i) {
+      anchorPoints.push(new THREE.Vector3());
     });
     _.loop(ticks * 8, function (i) {
       tickPoints.push(new THREE.Vector3());
@@ -132,12 +143,17 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     var meshOptions = { dynamic: true, type: 'line' };
     var arrowOptions = { dynamic: true, size: options.size, offset: .5 };
     var tickOptions = { dynamic: true, size: options.size * .2 };
+    var labelOptions = { dynamic: true };
 
-    // Line, arrowhead and tick marks.
+    // Scale label callback
+    var callback = function (i) { return this.scale[i]; }.bind(this);
+
+    // Line, arrowhead, tick marks and labels.
     this.line = new MathBox.Renderable.Mesh(points, meshOptions, style);
     this.arrow = new MathBox.Renderable.ArrowHead(points[n - 2], points[n - 1], arrowOptions, style);
     this.ticks = new MathBox.Renderable.Ticks(tickPoints, tickSigns, epsilon, tickOptions, style);
-  }//,
+    this.labels = new MathBox.Renderable.Labels(anchorPoints, anchorSpacer, callback, labelOptions, style);
+  },
 
 });
 

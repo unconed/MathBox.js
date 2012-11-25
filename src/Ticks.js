@@ -1,8 +1,16 @@
 /**
  * Helper to place equally spaced ticks in a range at sensible positions.
+ *
+ * @param min/max - Minimum and maximum of range
+ * @param n - Desired number of ticks in range
+ * @param scale - Multiplier for base steps of scale (e.g. 1 or π).
+ * @param inclusive - Whether to add ticks at the edges
+ * @param bias - Integer to bias divisions one or more levels up or down (to create nested scales)
  */
-MathBox.Ticks = function (min, max, n, scale, inclusive) {
+MathBox.Ticks = function (min, max, n, scale, inclusive, bias) {
+  // Desired
   n = n || 10;
+  bias = bias || 0;
 
   // Calculate naive tick size.
   var span = max - min;
@@ -11,7 +19,7 @@ MathBox.Ticks = function (min, max, n, scale, inclusive) {
   // Round to the floor'd power of ten (or two, for pi-ticks).
   scale = scale || 1;
   var base = scale == π ? 2 : 10;
-  var ref = scale * Math.pow(base, Math.floor(Math.log(ideal / scale) / Math.log(base)));
+  var ref = scale * (bias + Math.pow(base, Math.floor(Math.log(ideal / scale) / Math.log(base))));
 
   // Make derived steps at sensible factors.
   var factors = base == π ? [1] : [5, 1, .5];
@@ -36,7 +44,7 @@ MathBox.Ticks = function (min, max, n, scale, inclusive) {
   return ticks;
 };
 
-MathBox.TicksLog = function (min, max, n, base, inclusive) {
+MathBox.TicksLog = function (min, max, n, base, inclusive, bias) {
   // TODO: Tick equally in log space
   // Convert fractional part into floor(log)*(1+fraction)
 };

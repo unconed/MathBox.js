@@ -4,11 +4,9 @@ vendor/domready.js
 vendor/underscore.js
 vendor/tquery-bundle.js
 vendor/jquery.min.js
-vendor/CSS3D.js/css3d/css3d.js
 "
 
 GLVENDOR="
-vendor/CSS3D.js/css3d/css3d.js
 vendor/ThreeBox.js/vendor/microevent.js
 vendor/ThreeBox.js/vendor/microajax.js
 vendor/ThreeBox.js/build/ThreeBox-core.js
@@ -27,6 +25,7 @@ src/tQuery.js
 src/Director.js
 src/Style.js
 src/CameraProxy.js
+src/Overlay.js
 
 src/primitives/Primitive.js
 src/primitives/Curve.js
@@ -41,6 +40,7 @@ src/renderables/Renderable.js
 src/renderables/Mesh.js
 src/renderables/ArrowHead.js
 src/renderables/Ticks.js
+src/renderables/Labels.js
 
 src/viewports/Viewport.js
 src/viewports/ViewportCartesian.js

@@ -3,11 +3,18 @@
  *
  * Has a mathematical viewport, contains mathematical primitives, can be added to a three.js scene.
  */
-MathBox.Stage = function (options, world, cssOverlay) {
+MathBox.Stage = function (options, world, overlay) {
   this.options = options || {};
 
   this._world = world;
-  this.cssOverlay = cssOverlay;
+
+  // Prepare overlay
+  this.overlay = overlay;
+  world.on('resize', function (width, height) {
+    this.overlay.size(width, height);
+    this.width = width;
+    this.height = height;
+  }.bind(this));
 
   // Create array to hold primitives
   this.primitives = [];
@@ -48,7 +55,11 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
   // Update before render.
   update: function () {
-    var viewport = this._viewport;
+    var viewport = this._viewport,
+        camera = this._world.tCamera(),
+        cameraProxy = this.cameraProxy,
+        width = this.width,
+        height = this.height;
 
     // Apply running animations.
     this.animator.update();
@@ -59,15 +70,18 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Loop over all primitives.
     _.each(this.primitives, function (primitive) {
       // Adjust to viewport
-      primitive.adjust(viewport);
+      primitive.adjust(viewport, cameraProxy, width, height);
 
       // Loop over renderables
       var renderables = primitive.renderables();
       _.each(renderables, function (renderable) {
         // Adjust visible renderables to viewport
-        renderable.object && renderable.adjust(viewport);
+        renderable.object && renderable.adjust(viewport, cameraProxy, width, height);
       });
     });
+
+    // Update sprite overlay
+    this.overlay && this.overlay.update(camera);
   },
 
   /**
@@ -78,8 +92,14 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Overload Object3D.add
 
     if (object instanceof THREE.Object3D) {
-      // Add to three.js scene tree
-      return THREE.Object3D.prototype.add.call(this, object);
+      if (object instanceof MathBox.Sprite) {
+        // Add to 2D overlay
+        return this.overlay.add(object);
+      }
+      else {
+        // Add to three.js scene tree
+        return THREE.Object3D.prototype.add.call(this, object);
+      }
     }
     else {
       // Add to mathbox.
@@ -105,8 +125,14 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Overload Object3D.remove
 
     if (object instanceof THREE.Object3D) {
-      // Remove from three.js scene tree
-      return THREE.Object3D.prototype.remove.call(this, object);
+      if (object instanceof MathBox.Sprite) {
+        // Remove from 2D overlay
+        return this.overlay.remove(object);
+      }
+      else {
+        // Remove from three.js scene tree
+        return THREE.Object3D.prototype.remove.call(this, object);
+      }
     }
     else {
 

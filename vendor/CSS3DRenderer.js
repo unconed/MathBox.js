@@ -167,9 +167,18 @@ THREE.CSS3DRenderer = function () {
 
 					// http://swiftcoder.wordpress.com/2008/11/25/constructing-a-billboard-matrix/
 
+          var scale = 1;
+					if (!object.affectedByDistance) {
+            _tmpMatrix.multiply( camera.matrixWorldInverse, object.matrixWorld );
+            scale *= -_tmpMatrix.elements[14];
+          }
+
 					_tmpMatrix.copy( camera.matrixWorldInverse );
 					_tmpMatrix.transpose();
 					_tmpMatrix.extractPosition( object.matrixWorld );
+
+					_tmpMatrix.scale( object.scale );
+					_tmpMatrix.scale({ x: scale, y: scale, z: scale });
 
 					_tmpMatrix.elements[ 3 ] = 0;
 					_tmpMatrix.elements[ 7 ] = 0;
@@ -205,7 +214,6 @@ THREE.CSS3DRenderer = function () {
 			}
 
 		}
-
 	};
 
 };

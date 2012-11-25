@@ -1,28 +1,23 @@
 /**
  * World.mathBox() – Create a mathbox-capable renderer inside a DOM element.
  */
-tQuery.World.register('mathBox', function (element, options) {
+tQuery.World.registerInstance('mathBox', function (element, options) {
   element = element || document.body;
 
   // Create threebox scene for WebGL
   this.threeBox(element, options);
 
-  // Create CSS 3D overlay for labels / annotations
-  var cssOverlay = new Acko.CSS3DRenderer();
-  element.appendChild(cssOverlay.domElement);
-  cssOverlay.domElement.style.position = 'absolute';
-  cssOverlay.domElement.style.left = 0;
-  cssOverlay.domElement.style.top = 0;
-  cssOverlay.domElement.style.right = 0;
-  cssOverlay.domElement.style.bottom = 0;
-
-  // Auto-size overlay
-  this.on('resize', function (width, height) {
-    cssOverlay.setSize(width, height);
-  });
+  // Create overlay for labels / annotations
+  var overlay = new MathBox.Overlay();
+  element.appendChild(overlay.domElement);
+  overlay.domElement.style.position = 'absolute';
+  overlay.domElement.style.left = 0;
+  overlay.domElement.style.top = 0;
+  overlay.domElement.style.right = 0;
+  overlay.domElement.style.bottom = 0;
 
   // Create mathbox stage
-  var mathbox = new MathBox.Stage(options, this, cssOverlay);
+  var mathbox = new MathBox.Stage(options, this, overlay);
   var callback = function () {
     mathbox.update();
   };

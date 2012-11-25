@@ -7,6 +7,3 @@
 [submodule "vendor/ThreeRTT.js"]
 	path = vendor/ThreeRTT.js
 	url = https://github.com/unconed/ThreeRTT.js
-[submodule "vendor/CSS3D.js"]
-	path = vendor/CSS3D.js
-	url = https://github.com/unconed/CSS3D.js.git
