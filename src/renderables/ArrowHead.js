@@ -18,6 +18,27 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     };
   },
 
+  make: function (materials) {
+    var options = this.get();
+
+    // Make material.
+    var material = this.material = materials.generic(options);
+
+    this._from = new THREE.Vector3();
+    this._to = new THREE.Vector3();
+
+    this.diff = new THREE.Vector3();
+    this.bi = new THREE.Vector3();
+    this.normal = new THREE.Vector3(0, 0, 1);
+
+    // Make cone mesh
+    var geometry = this.geometry = new THREE.CylinderGeometry(.33, 0, 1, 16, 1);
+    this.object = new THREE.Mesh(geometry, material);
+
+    // Refresh material uniforms.
+    this.refresh();
+  },
+
   adjust: function (viewport) {
     var options = this.get();
     var offset = options.offset;
@@ -76,27 +97,6 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
 
     MathBox.Renderable.prototype.adjust.call(this, viewport);
   },
-
-  make: function (materials) {
-    var options = this.get();
-
-    // Make material.
-    var material = this.material = materials.generic(options);
-
-    this._from = new THREE.Vector3();
-    this._to = new THREE.Vector3();
-
-    this.diff = new THREE.Vector3();
-    this.bi = new THREE.Vector3();
-    this.normal = new THREE.Vector3(0, 0, 1);
-
-    // Make cone mesh
-    var geometry = this.geometry = new THREE.CylinderGeometry(.33, 0, 1, 16, 1);
-    this.object = new THREE.Mesh(geometry, material);
-
-    // Refresh material uniforms.
-    this.refresh();
-  }//,
 
 });
 

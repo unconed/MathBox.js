@@ -2,10 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>MathBox - Example: Complex 4D surface projected down to 3D.</title>
+  <title>MathBox - Example: Axis labeling.</title>
 
   <!--
-    This example shows a complex 4D surface projected down to 3D
+    This example shows labelling of axes.
   -->
 
   <style type="text/css" media="screen">
@@ -84,33 +84,49 @@
         // Cartesian viewport
         .viewport({
           type: 'cartesian',
-          range: [[-5, 5], [-5, 5], [-5, 5]],
+          range: [[-3, 3], [-2, 2], [-1, 1]],
           scale: [1, 1, 1],
-          polar: 0,
         })
         .camera({
-          orbit: 4,
-          phi: τ/2,
-          theta: .2,
+          orbit: 3.5,
+          phi: τ/6,
+          theta: 0.3,
         })
         .transition(300)
 
-        // Surface function
-        .surface({
-          mesh: false,
-          line: true,
-          shaded: true,
-          domain: [[-2.5, 1.5], [-π*1.5, π*1.5]],
-          n: [32, 64],
-          expression: surfaceFunc,
+        // Axes
+        .axis({
+          axis: 0,
+          color: 0xa0a0a0,
+          ticks: 5,
+          lineWidth: 2,
+          size: .05,
+        })
+        .axis({
+          axis: 1,
+          color: 0xa0a0a0,
+          ticks: 5,
+          lineWidth: 2,
+          size: .05,
+          zero: false,
+        })
+        .axis({
+          axis: 2,
+          color: 0xa0a0a0,
+          ticks: 5,
+          lineWidth: 2,
+          size: .05,
+          zero: false,
+        })
+
+        // Grid
+        .grid({
+          axis: [0, 2],
+          color: 0xc0c0c0,
+          lineWidth: 1,
         })
 
       document.getElementById('info').style.opacity = '0';
-
-      // Rotate camera continuously
-      mathbox.world().loop().hookPreRender(function () {
-        mathbox.set('camera', { phi: +new Date() * .0003 });
-      });
 
     });
   });
@@ -128,18 +144,16 @@
     return (+new Date() - clocks[id]) * .001;
   }
 
-  // Complex exponentiation function, projected down to 3D
+  // Arbitrary function
   function surfaceFunc(x, y) {
-    var p = π/2;
-    var z = Math.exp(x);
-
-    return [
-      Math.cos(y) * z + Math.cos(p) * y,
-      Math.sin(y) * z,
-      x  + Math.sin(p) * y
-    ];
+    return [x, 3 + -1 + Math.cos(x*5) + Math.cos(y*5), y];
   }
 
+  // Horizontal slice
+  function sliceFunc(x, y) {
+    var t = clock(1);
+    return Math.sin(t) * .75 + 2;
+  }
 
   </script>
 

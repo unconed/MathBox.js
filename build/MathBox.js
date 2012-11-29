@@ -1,659 +1,4 @@
 /**
- * Very spartan three.js CSS/DOM renderer.
- * by Steven Wittens
- * https://github.com/unconed/CSS3D.js
- *
- * ===========================================================================
- *
- * Places 3D transformed objects in the DOM, and controls the camera using
- * a perspective transform on a parent div.
- *
- * All rendering is done using the browser's render layers.
- *
- * ===========================================================================
- *
- * Only supports:
- * - THREE.Line (many vertices)
- * - THREE.PlaneGeometry mesh (one x/y segment)
- *
- * Planes can be rendered as solid rectangles, or used to contain arbitrary
- * DOM elements. If given a name, a text/html template is requested to fill the div.
- *
- * options {
- *   perspective: (optional) Override the DOM element which receives the camera's perspective.
- *                          or 'false' to override perspective manually.
- * }
- *
- */
-window.Acko = window.Acko || {};
-
-(function (Acko) {
-
-/**
- * CSS 3D renderer for Three.JS.
- */
-var CSS3D = Acko.CSS3DRenderer = function (options) {
-
-  // Parse options.
-  options = options || {};
-
-  // Prepare render state.
-  var
-  _width, _height, _widthHalf, _heightHalf,
-  _projScreenMatrix = new THREE.Matrix4(),
-  _projScreenobjectMatrixWorld = new THREE.Matrix4(),
-
-  // Prepare viewport + camera divs.
-  _canvas = document.createElement('div'),
-  _camera = document.createElement('div');
-
-  _canvas.className = 'css3d-renderer';
-  _camera.className = 'css3d-camera';
-
-  _canvas.appendChild(_camera);
-
-  this.domElement = _canvas;
-
-  /**
-   * Sets CSS 3D viewport size for perspective calculations.
-   */
-  this.setSize = function (width, height) {
-
-    _width = width; _height = height;
-    _widthHalf = _width / 2; _heightHalf = _height / 2;
-
-  };
-
-  /**
-   * Render the scene using the given camera.
-   *
-   * DOM renderables are created for all objects.
-   */
-  this.render = function (scene, camera) {
-
-    var objects, object, o,
-        renderable,
-        visible,
-        color,
-        lineLength, svg;
-
-    scene.updateMatrixWorld();
-
-    syncScene(scene);
-
-    updateCamera(camera);
-
-    objects = scene.objects;
-
-    for ( o = 0, ol = objects.length; o < ol; o ++ ) {
-
-      object = objects[ o ];
-      domrender = object.domrender;
-
-      // Ignore objects that have no updates.
-      if (!domrender || !domrender.needsRender) continue;
-
-      // Apply visibility state.
-      if (object.visible) {
-        if (!domrender.visible) {
-          domrender.show();
-        }
-      }
-      else {
-        if (domrender.visible) {
-          domrender.hide();
-        }
-      }
-
-      // Update object and mark as done.
-      domrender.update();
-      domrender.needsRender = false;
-
-    }
-  };
-
-  /**
-   * Make renderable for object from the scene.
-   */
-  function addSceneObject(scene, object) {
-    var domrender = object.domrender;
-    if (typeof domrender == 'undefined') {
-      domrender = object.domrender = CSS3D.Renderable.factory(object);
-    }
-    if (domrender) {
-      domrender.insertInto(_camera);
-    }
-  }
-
-  /**
-   * Remove renderable for removed object in scene.
-   */
-  function removeSceneObject(scene, object) {
-    var domrender = object.domrender;
-    if (domrender) {
-      domrender.remove();
-    }
-  }
-
-  /**
-   * Sync up with add/removed objects in the scene.
-   */
-  function syncScene(scene) {
-    var i, object, domrender;
-
-    // Insert new objects into the DOM
-    while (scene.__objectsAdded.length) {
-      addSceneObject(scene, scene.__objectsAdded[0]);
-      scene.__objectsAdded.splice(0, 1);
-    }
-
-    // Remove deleted objects from the dom.
-    while (scene.__objectsRemoved.length) {
-      removeSceneObject(scene, scene.__objectsRemoved[0]);
-      scene.__objectsRemoved.splice(0, 1);
-    }
-  }
-
-  /**
-   * Generate the transform for the given camera and perspective depth.
-   */
-  function cameraTransform(camera, perspective) {
-    var t = '';
-
-    var l = camera.position.length();
-
-    camera.matrixWorldInverse.getInverse(camera.matrixWorld);
-
-    t += 'translate3d(0,0,'+ epsilon(perspective) + 'px) ';
-    t += CSS3D.toCSSMatrix(camera.matrixWorldInverse, true);
-    t += ' translate3d('+ _widthHalf + 'px,'+ _heightHalf + 'px,0)';
-
-    return t;
-  }
-
-  /**
-   * Apply CSS transform for the given camera and set perspective.
-   */
-  function updateCamera(camera) {
-    var perspective = .5 / Math.tan(camera.fov * π / 360) * _height;
-    var transform = cameraTransform(camera, perspective);
-
-    _camera.style.WebkitTransform = transform;
-       _camera.style.MozTransform = transform;
-         _camera.style.OTransform = transform;
-        _camera.style.msTransform = transform;
-          _camera.style.transform = transform;
-
-    if (options.perspective !== false) {
-      var element = options.perspective || CSS3D.perspective || _canvas,
-          p = perspective + 'px';
-
-      element.style.WebkitPerspective = p;
-         element.style.MozPerspective = p;
-           element.style.OPerspective = p;
-          element.style.msPerspective = p;
-            element.style.terspective = p;
-    }
-
-  }
-
-  this.updateCamera = updateCamera;
-}
-
-/**
- * Get contents of script tag with the id "template-<id>".
- */
-CSS3D.getTemplate = function (id) {
-  var e = document.getElementById('template-' + id);
-  return e && (e.innerText || e.textContent);
-};
-
-/**
- * Convert material to RGBA.
- */
-CSS3D.toCSSColor = function (material) {
-  var color = material.color;
-  return 'rgba('+
-              (color.r * 255)+','+
-              (color.g * 255)+','+
-              (color.b * 255)+','
-              +material.opacity+')';
-}
-
-/**
- * Convert THREE.js camera to CSS matrix.
- */
-CSS3D.toCSSMatrix = function (matrix, invertCamera) {
-  var m = matrix, c;
-  if (invertCamera) {
-    // Flip Y for difference in Y orientation between GL and CSS.
-    c = [
-      m.n11,-m.n21, m.n31, m.n41,
-      m.n12,-m.n22, m.n32, m.n42,
-      m.n13,-m.n23, m.n33, m.n43,
-      m.n14,-m.n24, m.n34, m.n44,
-    ];
-  }
-  else {
-    c = [
-      m.n11, m.n21, m.n31, m.n41,
-      m.n12, m.n22, m.n32, m.n42,
-      m.n13, m.n23, m.n33, m.n43,
-      m.n14, m.n24, m.n34, m.n44,
-    ];
-  }
-
-  for (var i in c) c[i] = epsilon(c[i]);
-
-  return 'matrix3d('+c.join(',')+')';
-}
-
-/**
- * Base class for DOM renderable.
- */
-CSS3D.Renderable = function (object) {
-  this.object = object;
-
-  this.needsRender = true;
-  this.visible = true;
-  this.selected = false;
-  this.tagged = false;
-  this.editable = false;
-
-  this.$element = null;
-  this.init();
-};
-
-CSS3D.Renderable.prototype = {
-  // Active markup for the element.
-  $markup: function () {
-    return $('<div>');
-  },
-
-  // Prepare DOM view
-  init: function () {
-    this.$element = this.$markup();
-  },
-
-  // DOM manipulation
-  insertInto: function (container) {
-    $(container).append(this.$element);
-  },
-
-  remove: function () {
-    this.$element.remove();
-  },
-
-  // Update/refresh object
-  update: function () {
-
-  },
-
-  // Visibility
-  show: function () {
-    this.$element.show();
-    this.visible = true;
-  },
-
-  hide: function () {
-    this.$element.hide();
-    this.visible = false;
-  },
-};
-
-
-//////////////////////
-
-/**
- * Renderable: DOM/HTML object.
- */
-CSS3D.HTML = function (object) {
-  this.object = null;
-  this.type = 'CSSHTML';
-  this.supr(object);
-  this.editable = true;
-
-  this.state = false;
-};
-
-CSS3D.HTML.v = new THREE.Vector4();
-
-CSS3D.HTML.prototype = $.extend(new CSS3D.Renderable(), {
-
-  // Straight DOM div
-  $markup: function () {
-    var $div = $('<div>');
-    $div.css({
-      position: 'absolute',
-      WebkitTransformOrigin: '0% 0%',
-         MozTransformOrigin: '0% 0%',
-           OTransformOrigin: '0% 0%',
-          msTransformOrigin: '0% 0%',
-            transformOrigin: '0% 0%',
-    });
-
-    if (this.object.name != '') {
-      $div.append(CSS3D.getTemplate(this.object.name));
-    }
-    $div.addClass('css3d-' + this.object.name);
-
-    return $div;
-  },
-
-  // Simple transform
-  transform: function (objectMatrixWorld) {
-    return [
-      CSS3D.toCSSMatrix(objectMatrixWorld),
-    ].join(' ');
-  },
-
-  // Apple color and transform.
-  update: function () {
-
-    var object = this.object,
-        objectMatrixWorld = object.matrixWorld,
-        objectMaterial = object.material;
-
-    // Text color.
-    var color = CSS3D.toCSSColor(objectMaterial);
-
-    // CSS transform
-    var t = this.transform(objectMatrixWorld);
-    this.$element.css({
-      color: color,
-      WebkitTransform: t,
-         MozTransform: t,
-           OTransform: t,
-          msTransform: t,
-            transform: t,
-    });
-
-    if (this.selected ^ this.state) {
-      this.$element.css({ opacity: this.selected ? .75 : 1 });
-      this.state = this.selected;
-    }
-
-  },
-
-});
-CSS3D.HTML.prototype.supr = CSS3D.Renderable;
-
-///////////////////////
-
-/**
- * Renderable: Solid plane.
- */
-CSS3D.Plane = function (object) {
-  this.object = null;
-  this.type = 'CSSPlane';
-  this.supr(object);
-  this.editable = true;
-
-  this.state = false;
-};
-
-CSS3D.Plane.v = new THREE.Vector4();
-
-CSS3D.Plane.prototype = $.extend(new CSS3D.Renderable(), {
-
-  // 1x1 px solid DIV
-  $markup: function () {
-    var $div = $('<div>');
-    $div.css({
-      position: 'absolute',
-      width:  1 +'px',
-      height: 1 +'px',
-      WebkitTransformOrigin: '0% 0%',
-         MozTransformOrigin: '0% 0%',
-           OTransformOrigin: '0% 0%',
-          msTransformOrigin: '0% 0%',
-            transformOrigin: '0% 0%',
-    });
-    $div[0].editRender = this;
-    return $div;
-  },
-
-  // Object transform + given width/height
-  transform: function (width, height, objectMatrixWorld) {
-
-    // overdraw to avoid seams, 1px = 1 unit
-    // width
-    var l, fx, fy, v = CSS3D.Plane.v;
-    v.set(objectMatrixWorld.n11, objectMatrixWorld.n21, objectMatrixWorld.n31, objectMatrixWorld.n41);
-    l = width * v.length(),
-    fx = (l+.25)/l;
-    // height
-    v.set(objectMatrixWorld.n12, objectMatrixWorld.n22, objectMatrixWorld.n32, objectMatrixWorld.n42);
-    l = width * v.length(),
-    fy = (l+.25)/l;
-
-    return [
-      CSS3D.toCSSMatrix(objectMatrixWorld),
-      // fix for handedness issues in chrome
-      'matrix3d(1,0,0,0, 0,1,0,0, 0,0,-1,0, 0,0,0,1)',
-      'rotateY(180deg)',
-      //
-      'scale3d('+ epsilon(fx*width) +','+ epsilon(fy*height) +',1)',
-      'translate3d('+ epsilon(-.5 * fx) +'px,'+ epsilon(-.5 * fy) +'px,0)',
-    ].join(' ');
-  },
-
-  // Apply transform, color.
-  update: function () {
-
-    var object = this.object,
-        objectGeometry = object.geometry,
-        objectMatrixWorld = object.matrixWorld,
-        objectMaterial = object.material,
-        objectColor = objectMaterial.color;
-
-    var vertices = objectGeometry.vertices;
-
-    var width = vertices[1].position.x*2;
-    var height = vertices[1].position.y*2;
-
-    // Global plane color.
-    var color = CSS3D.toCSSColor(objectMaterial);
-    if (this.tagged) {
-      color = 'rgba(30,90,170,.75)';
-    }
-
-    var t = this.transform(width, height, objectMatrixWorld);
-    this.$element.css({
-      background: color,
-      WebkitTransform: t,
-         MozTransform: t,
-           OTransform: t,
-          msTransform: t,
-            transform: t,
-      WebkitBackfaceVisibility: 'hidden',
-         MozBackfaceVisibility: 'hidden',
-           OBackfaceVisibility: 'hidden',
-          msBackfaceVisibility: 'hidden',
-            backfaceVisibility: 'hidden',
-    });
-
-    if (this.selected ^ this.state) {
-      this.$element.css({ opacity: this.selected ? .75 : 1 });
-      this.state = this.selected;
-    }
-
-  },
-
-});
-CSS3D.Plane.prototype.supr = CSS3D.Renderable;
-
-///////////////////////
-
-/**
- * Renderable: (Poly-)Line.
- */
-CSS3D.Line = function (object) {
-  this.object = null;
-  this.type = 'CSSLine';
-  this.supr(object);
-
-  this.$lines = [];
-  this.lineCount = 0;
-};
-
-CSS3D.Line.diff = new THREE.Vector3();
-
-CSS3D.Line.prototype = $.extend(new CSS3D.Renderable(), {
-
-  // Each line segment is a 1x1 px solid div.
-  $line: function () {
-    var $div = $('<div>');
-    $div.css({
-      position: 'absolute',
-      width: 1 +'px',
-      height: 1 +'px',
-      WebkitTransformOrigin: '0% 0%',
-         MozTransformOrigin: '0% 0%',
-           OTransformOrigin: '0% 0%',
-          msTransformOrigin: '0% 0%',
-            transformOrigin: '0% 0%',
-    });
-    return $div;
-  },
-
-  // Get next available line segment (and instantiate DOM object).
-  getNextLine: function () {
-    var $line = this.$lines[this.lineCount];
-    if (!$line) {
-      this.$lines[this.lineCount] = $line = this.$line();
-      this.$element.append($line);
-    }
-    this.lineCount++;
-    return $line;
-  },
-
-  // Begin building new polyline
-  newPass: function () {
-    this.lineCount = 0;
-  },
-
-  // Cleanup left-over line segments.
-  garbageCollect: function () {
-    while (this.$lines.length > this.lineCount) {
-      var $line = this.$lines.pop();
-      $line.remove();
-    }
-  },
-
-  // Get transform for line segment of given width and axis spin.
-  transform: function (v1, v2, width, spin) {
-
-    var d = CSS3D.Line.diff;
-    d.sub(v2, v1);
-
-    // Orient line using euler angles.
-    function s(x) { return x*x };
-    var phi = Math.atan2(d.z, d.x),
-        theta = Math.atan2(d.y, Math.sqrt(s(d.z) + s(d.x)));
-
-    // Transform 1 px square into a rectangle centered on the line.
-    return [
-      'translate3d('+ epsilon(v1.x) + 'px,' + epsilon(v1.y) + 'px,' + epsilon(v1.z) +'px)',
-      'rotateY('+ epsilon(-phi)  +'rad)',
-      'rotateZ('+ epsilon(theta) +'rad)',
-      'rotateX('+ epsilon(spin)  +'deg)',
-      'scale3d('+ epsilon(d.length()) +','+ epsilon(width) +',1)',
-      'translate3d(0,-.5px,0)',
-    ].join(' ');
-  },
-
-  // Generate/Update line segments as needed, apply color.
-  update: function () {
-
-    var object = this.object, v, $line,
-        objectMatrixWorld = object.matrixWorld,
-        objectMaterial = object.material,
-        objectGeometry = object.geometry,
-        vertices = objectGeometry.vertices;
-
-    // Reset counts re: number of lines in this renderable.
-    this.newPass();
-
-    // Global line color.
-    var color = CSS3D.toCSSColor(objectMaterial);
-
-    // Pairwise vertex iteration.
-    var v1 = vertices[0].position, v2, t;
-    for (v = 1, vl = vertices.length; v < vl; v++) {
-
-      v2 = v1;
-      v1 = vertices[v].position;
-
-      // Insert two lines in the scene at 90 degree angles.
-      t = this.transform(v2, v1, object.material.linewidth, 0);
-      $line = this.getNextLine();
-      $line.css({
-        backgroundColor: color,
-        WebkitTransform: t,
-           MozTransform: t,
-             OTransform: t,
-            msTransform: t,
-              transform: t,
-      });
-
-      t = this.transform(v2, v1, object.material.linewidth, 90);
-      $line = this.getNextLine();
-      $line.css({
-        backgroundColor: color,
-        WebkitTransform: t,
-           MozTransform: t,
-             OTransform: t,
-            msTransform: t,
-              transform: t,
-      });
-
-    }
-
-    this.garbageCollect();
-  }
-
-
-});
-CSS3D.Line.prototype.supr = CSS3D.Renderable;
-
-////////////////////
-
-/**
- * Return the appropriate renderable for a Three.JS object (if compatible).
- */
-CSS3D.Renderable.factory = function (object) {
-  if (object instanceof THREE.Mesh) {
-    if (object.geometry instanceof THREE.PlaneGeometry) {
-      if (object.name != '') {
-        return new CSS3D.HTML(object);
-      }
-      else {
-        return new CSS3D.Plane(object);
-      }
-    }
-  }
-  if (object instanceof THREE.Line) {
-    return new CSS3D.Line(object);
-  }
-  return false;
-}
-
-// Allow for global perspective override.
-CSS3D.perspective = null;
-
-/**
- * Avoid issues with parsing scientific notation in CSS matrices.
- */
-function epsilon(x) {
-  if (Math.abs(x) < 1e-6) {
-    return 0;
-  }
-  return x;
-}
-
-})(window.Acko);
-/**
  * MicroEvent - to make any js object an event emitter (server or browser)
  * 
  * - pure javascript - server compatible, browser compatible
@@ -773,7 +118,7 @@ tQuery.World.prototype.emit = tQuery.World.prototype.dispatchEvent;
  *
  * Based on tQuery boilerplate.
  */
-tQuery.World.register('threeBox', function (element, options) {
+tQuery.World.registerInstance('threeBox', function (element, options) {
 
   // Shorthand, omit element.
   if (element && !(element instanceof Node)) {
@@ -814,7 +159,7 @@ tQuery.World.register('threeBox', function (element, options) {
 /**
  * World.addThreeBox – Set up threebox.
  */
-tQuery.World.register('addThreeBox', function (element, options) {
+tQuery.World.registerInstance('addThreeBox', function (element, options) {
   // Sanity check
   console.assert(this.hasThreeBox() !== true);
 
@@ -908,13 +253,13 @@ tQuery.World.register('addThreeBox', function (element, options) {
   return this;
 });
 
-tQuery.World.register('hasThreeBox', function () {
+tQuery.World.registerInstance('hasThreeBox', function () {
   // Get threeBox context.
   var ctx  = tQuery.data(this, "_threeBoxContext")
   return ctx === undefined ? false : true;
 });
 
-tQuery.World.register('removeThreeBox', function () {
+tQuery.World.registerInstance('removeThreeBox', function () {
   // Get threeBox context.
   var ctx  = tQuery.data(this, '_threeBoxContext');
   if (ctx === undefined) return this;
@@ -3528,11 +2873,18 @@ MathBox.Animator.Animation.prototype = {
  *
  * Has a mathematical viewport, contains mathematical primitives, can be added to a three.js scene.
  */
-MathBox.Stage = function (options, world, cssOverlay) {
+MathBox.Stage = function (options, world, overlay) {
   this.options = options || {};
 
   this._world = world;
-  this.cssOverlay = cssOverlay;
+
+  // Prepare overlay
+  this.overlay = overlay;
+  world.on('resize', function (width, height) {
+    this.overlay.size(width, height);
+    this.width = width;
+    this.height = height;
+  }.bind(this));
 
   // Create array to hold primitives
   this.primitives = [];
@@ -3573,7 +2925,10 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
   // Update before render.
   update: function () {
-    var viewport = this._viewport;
+    var viewport = this._viewport,
+        camera = this._world.tCamera(),
+        width = this.width,
+        height = this.height;
 
     // Apply running animations.
     this.animator.update();
@@ -3584,15 +2939,18 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Loop over all primitives.
     _.each(this.primitives, function (primitive) {
       // Adjust to viewport
-      primitive.adjust(viewport);
+      primitive.adjust(viewport, camera, width, height);
 
       // Loop over renderables
       var renderables = primitive.renderables();
       _.each(renderables, function (renderable) {
         // Adjust visible renderables to viewport
-        renderable.object && renderable.adjust(viewport);
+        renderable.object && renderable.adjust(viewport, camera, width, height);
       });
     });
+
+    // Update sprite overlay
+    this.overlay && this.overlay.update(camera);
   },
 
   /**
@@ -3603,8 +2961,14 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Overload Object3D.add
 
     if (object instanceof THREE.Object3D) {
-      // Add to three.js scene tree
-      return THREE.Object3D.prototype.add.call(this, object);
+      if (object instanceof MathBox.Sprite) {
+        // Add to 2D overlay
+        return this.overlay.add(object);
+      }
+      else {
+        // Add to three.js scene tree
+        return THREE.Object3D.prototype.add.call(this, object);
+      }
     }
     else {
       // Add to mathbox.
@@ -3630,8 +2994,14 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Overload Object3D.remove
 
     if (object instanceof THREE.Object3D) {
-      // Remove from three.js scene tree
-      return THREE.Object3D.prototype.remove.call(this, object);
+      if (object instanceof MathBox.Sprite) {
+        // Remove from 2D overlay
+        return this.overlay.remove(object);
+      }
+      else {
+        // Remove from three.js scene tree
+        return THREE.Object3D.prototype.remove.call(this, object);
+      }
     }
     else {
 
@@ -4189,9 +3559,17 @@ MathBox.Materials.prototype = {
 };
 /**
  * Helper to place equally spaced ticks in a range at sensible positions.
+ *
+ * @param min/max - Minimum and maximum of range
+ * @param n - Desired number of ticks in range
+ * @param scale - Multiplier for base steps of scale (e.g. 1 or π).
+ * @param inclusive - Whether to add ticks at the edges
+ * @param bias - Integer to bias divisions one or more levels up or down (to create nested scales)
  */
-MathBox.Ticks = function (min, max, n, scale, inclusive) {
+MathBox.Ticks = function (min, max, n, scale, inclusive, bias) {
+  // Desired
   n = n || 10;
+  bias = bias || 0;
 
   // Calculate naive tick size.
   var span = max - min;
@@ -4200,7 +3578,7 @@ MathBox.Ticks = function (min, max, n, scale, inclusive) {
   // Round to the floor'd power of ten (or two, for pi-ticks).
   scale = scale || 1;
   var base = scale == π ? 2 : 10;
-  var ref = scale * Math.pow(base, Math.floor(Math.log(ideal / scale) / Math.log(base)));
+  var ref = scale * (bias + Math.pow(base, Math.floor(Math.log(ideal / scale) / Math.log(base))));
 
   // Make derived steps at sensible factors.
   var factors = base == π ? [1] : [5, 1, .5];
@@ -4225,34 +3603,29 @@ MathBox.Ticks = function (min, max, n, scale, inclusive) {
   return ticks;
 };
 
-MathBox.TicksLog = function (min, max, n, base, inclusive) {
+MathBox.TicksLog = function (min, max, n, base, inclusive, bias) {
   // TODO: Tick equally in log space
   // Convert fractional part into floor(log)*(1+fraction)
 };/**
  * World.mathBox() – Create a mathbox-capable renderer inside a DOM element.
  */
-tQuery.World.register('mathBox', function (element, options) {
+tQuery.World.registerInstance('mathBox', function (element, options) {
   element = element || document.body;
 
   // Create threebox scene for WebGL
   this.threeBox(element, options);
 
-  // Create CSS 3D overlay for labels / annotations
-  var cssOverlay = new Acko.CSS3DRenderer();
-  element.appendChild(cssOverlay.domElement);
-  cssOverlay.domElement.style.position = 'absolute';
-  cssOverlay.domElement.style.left = 0;
-  cssOverlay.domElement.style.top = 0;
-  cssOverlay.domElement.style.right = 0;
-  cssOverlay.domElement.style.bottom = 0;
-
-  // Auto-size overlay
-  this.on('resize', function (width, height) {
-    cssOverlay.setSize(width, height);
-  });
+  // Create overlay for labels / annotations
+  var overlay = new MathBox.Overlay();
+  element.appendChild(overlay.domElement);
+  overlay.domElement.style.position = 'absolute';
+  overlay.domElement.style.left = 0;
+  overlay.domElement.style.top = 0;
+  overlay.domElement.style.right = 0;
+  overlay.domElement.style.bottom = 0;
 
   // Create mathbox stage
-  var mathbox = new MathBox.Stage(options, this, cssOverlay);
+  var mathbox = new MathBox.Stage(options, this, overlay);
   var callback = function () {
     mathbox.update();
   };
@@ -4649,7 +4022,184 @@ MathBox.CameraProxy = function (world, options) {
   controls.update();
 }
 
-MathBox.Attributes.mixin(MathBox.CameraProxy);MathBox.Primitive = function (options) {
+MathBox.Attributes.mixin(MathBox.CameraProxy);/**
+ * MathBox Overlay
+ *
+ * Positions 2D labels on top of the scene and takes care of overlap.
+ */
+MathBox.Overlay = function () {
+  var element = this.domElement = document.createElement('div');
+
+  element.className = 'mathbox-overlay';
+
+  this.sprites = [];
+  this.v = new THREE.Vector3();
+  this.q = new THREE.Vector3();
+}
+
+MathBox.Overlay.prototype = {
+
+  size: function (width, height) {
+    this.width = width;
+    this.height = height;
+
+    this.domElement.style.width = width +'px';
+    this.domElement.style.height = height +'px';
+  },
+
+  add: function (object) {
+    if (this.sprites.indexOf(object) != -1) return;
+    this.sprites.push(object);
+
+    if (!object.element.parentNode) {
+      this.domElement.appendChild(object.element);
+    }
+
+    _.each(object.children, function (child) {
+      this.add(child);
+    }.bind(this))
+  },
+
+  remove: function (object) {
+    var index;
+    if ((index = this.sprites.indexOf(object)) == -1) return;
+    this.sprites.splice(index, 1);
+
+    if (object.element.parentNode) {
+      object.element.parentNode.removeChild(object.element);
+    }
+
+    _.each(object.children, function (child) {
+      this.remove(child);
+    }.bind(this))
+  },
+
+  update: function (camera) {
+		this.fov = 0.5 / Math.tan( camera.fov * Math.PI / 360 ) * this.height;
+
+    // Iterate over individual objects for update
+    _.each(this.sprites, function (sprite) {
+      this._update(sprite, camera);
+    }.bind(this));
+
+    // Iterate over individual objects for measurement
+    _.each(this.sprites, function (sprite) {
+      this._measure(sprite, camera);
+    }.bind(this));
+
+    // Iterate over individual objects for measurement
+    _.each(this.sprites, function (sprite) {
+      this._vis(sprite, camera);
+    }.bind(this));
+  },
+
+  _measure: function (object, camera) {
+    // Measure sprites
+    var element = object.element;
+    object.width = element.offsetWidth;
+    object.height = element.offsetHeight;
+  },
+
+  _vis: function (object, camera) {
+    // If already hidden, ignore
+    if (!object.visible) return;
+    if (!object.width && !object.height) return;
+
+    // Check visibility for each sprite relative to other visibles
+    var ox1 = object.left,
+        oy1 = object.top,
+        ox2 = object.width + ox1,
+        oy2 = object.height + oy1;
+
+    // Iterate only sprites after this one
+    found = false;
+    _.each(this.sprites, function (sprite) {
+      if (sprite === object) {
+        found = true;
+        return;
+      }
+      if (!found) return;
+      if (!sprite.visible) return;
+
+      var sx1 = sprite.left,
+          sy1 = sprite.top,
+          sx2 = sprite.width + sx1,
+          sy2 = sprite.height + sy1;
+
+      // Check for overlap in X or Y
+      if (ox2 < sx1 || ox1 > sx2) return;
+      if (oy2 < sy1 || oy1 > sy2) return;
+
+      // Hide
+      if (sprite.visible) {
+        sprite.element.style.display = 'none';
+        sprite.visible = false;
+      }
+    });
+  },
+
+  _update: function (object, camera) {
+    var v = this.v,
+        q = this.q,
+        epsilon = 0.01;
+
+    // Transform into camera space
+    v.copy(object.position);
+    camera.matrixWorldInverse.multiplyVector3(v);
+
+    // Project to 2D and convert to pixels
+    var x = -(v.x / v.z) * this.fov + this.width  * .5;
+    var y =  (v.y / v.z) * this.fov + this.height * .5;
+
+    // Add spacer
+    if (object.distance) {
+      // Add tangent and project again
+      q.copy(object.tangent).multiplyScalar(epsilon);
+      q.addSelf(object.position);
+      camera.matrixWorldInverse.multiplyVector3(q);
+
+      // Find difference and scale it
+      q.subSelf(v);
+      q.z = 0;
+      q.normalize().multiplyScalar(object.distance);
+      x += (q.y);
+      y += (q.x);
+    }
+
+    // Round to avoid pixel fuzzyness
+    x = Math.round(x);
+    y = Math.round(y);
+
+    // Set position and reset visibility
+    object.left = x;
+    object.top = y;
+    object.element.style.left = x + 'px';
+    object.element.style.top  = y + 'px';
+    object.element.style.display = 'block';
+    object.visible = true;
+
+  },
+
+};
+
+MathBox.Sprite = function (element, tangent, distance) {
+  this.element = element;
+  this.tangent = tangent || new THREE.Vector3(1, 0, 0);
+  this.distance = distance || 0;
+  this.width = 0;
+  this.height = 0;
+  this.visible = true;
+
+  element.style.position = 'absolute';
+  element.style.left = 0;
+  element.style.top = 0;
+
+  THREE.Object3D.call(this);
+}
+
+MathBox.Sprite.prototype = _.extend(new THREE.Object3D(), {
+  
+});MathBox.Primitive = function (options) {
   // Allow inheritance constructor
   if (options === null) return;
 
@@ -4661,9 +4211,6 @@ MathBox.Attributes.mixin(MathBox.CameraProxy);MathBox.Primitive = function (opti
   }
   options = options || defaults;
   this.set(options);
-
-  // Holds instantiated renderables.
-  this.renders = [];
 
   // Holds persistent object styles
   this.style = new MathBox.Style();
@@ -4934,40 +4481,46 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       axis: 0,
       offset: [0, 0, 0],
       n: 2,
+      labels: false,
       ticks: 10,
       tickBase: 1,
       arrow: true,
       size: .07,
       style: {
         lineWidth: 4,
-        color: new THREE.Color(0x707070)//,
-      }//,
+        color: new THREE.Color(0x707070),
+      },
+      zero: true,
     };
   },
 
   renderables: function () {
-    return [ this.line, this.ticks, this.arrow ];
+    return [ this.line, this.ticks, this.arrow, this.labels ];
   },
 
   type: function () {
     return 'axis';
   },
 
-  adjust: function (viewport) {
+  adjust: function (viewport, camera) {
     var options = this.get(),
         axis = options.axis,
         offset = options.offset,
         arrow = options.arrow,
         size = options.size,
+        labels = options.labels,
         ticks = options.ticks,
         tickBase = options.tickBase,
         n = options.n,
         points = this.points,
+        labelPoints = this.labelPoints,
+        labelTangent = this.labelTangent,
         tickPoints = this.tickPoints,
         tickSigns = this.tickSigns;
 
     var p = [0, 0, 0],
-        add = new THREE.Vector3();
+        add = new THREE.Vector3(),
+        four = new THREE.Vector4();
 
     // Prepare axis extents.
     var range = viewport.axis(axis),
@@ -4989,10 +4542,12 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     // Show/hide arrow
     this.arrow.show(arrow);
 
+    // Prepare scale divisions
+    var scale = this.scale = MathBox.Ticks(min, max, ticks, tickBase, true);
+
     // Prepare tick marks range/scale.
     this.ticks.show(!!ticks);
     if (ticks) {
-      var scale = MathBox.Ticks(min, max, ticks, tickBase, true);
       var limit = Math.floor(tickPoints.length / 2);
       if (scale.length > limit) scale = scale.slice(0, limit);
 
@@ -5004,19 +4559,24 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       // Place uniformly spaced pairs of points for ticks.
       var p = [0, 0, 0], mn = 100, mx = -100;
       _.each(scale, function (x, i) {
-        i = i*2;
         p[axis] = x;
 
-        tickPoints[i].set.apply(tickPoints[i], p);
-        tickPoints[i].addSelf(add);
-        tickSigns[i] = 1;
+        // Tick points for ticks (2 each)
+        var j = i*2;
+        tickPoints[j].set.apply(tickPoints[j], p);
+        tickPoints[j].addSelf(add);
+        tickSigns[j] = 1;
 
-        tickPoints[i+1].copy(tickPoints[i]);
-        tickSigns[i+1] = -1;
+        tickPoints[j+1].copy(tickPoints[j]);
+        tickSigns[j+1] = -1;
 
-        last = i + 1;
+        // Anchor points for label
+        labelPoints[i].copy(tickPoints[j]);
+
+        last = j + 1;
       });
 
+      // Fill remaining vertices with last point
       var i = last + 1, n = tickPoints.length;
       while (i < n) {
         tickPoints[i].copy(tickPoints[last]);
@@ -5024,7 +4584,12 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
         i++;
       }
     }
-    window.ij = true;
+
+    // Axis vector direction for labels
+    p = [0, 0, 0];
+    p[axis] = 1;
+    labelTangent.set.apply(labelTangent, p);
+    this.labels.show(!!labels);
   },
 
   make: function () {
@@ -5034,29 +4599,44 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
         size = options.size,
         ticks = options.ticks,
         style = this.style,
-        points = this.points = [],
-        tickPoints = this.tickPoints = [],
-        tickSigns = this.tickSigns = [],
+        points = this.points = [], // Points for drawing lines
+        labelPoints = this.labelPoints = [], // Points for attaching labels
+        labelTangent = this.labelTangent = new THREE.Vector3(), // Orientation for points and labels
+        tickPoints = this.tickPoints = [], // Points for drawing ticks (doubled)
+        tickSigns = this.tickSigns = [], // Alternating signs for tick shader
         epsilon = this.epsilon = new THREE.Vector3();
 
     // Prepare arrays of vertices.
     _.loop(n, function (x) {
       points.push(new THREE.Vector3());
     });
+    _.loop(ticks * 4, function (i) {
+      labelPoints.push(new THREE.Vector3());
+    });
     _.loop(ticks * 8, function (i) {
       tickPoints.push(new THREE.Vector3());
       tickSigns.push(1);
     });
 
+    // Prepare primitives
     var meshOptions = { dynamic: true, type: 'line' };
     var arrowOptions = { dynamic: true, size: options.size, offset: .5 };
     var tickOptions = { dynamic: true, size: options.size * .2 };
+    var labelOptions = { dynamic: true };
 
-    // Line, arrowhead and tick marks.
+    // Scale label callback
+    var callback = function (i) {
+      var x = this.scale[i];
+      if (x == 0 && !options.zero) return '';
+      return x;
+    }.bind(this);
+
+    // Line, arrowhead, tick marks and labels.
     this.line = new MathBox.Renderable.Mesh(points, meshOptions, style);
     this.arrow = new MathBox.Renderable.ArrowHead(points[n - 2], points[n - 1], arrowOptions, style);
     this.ticks = new MathBox.Renderable.Ticks(tickPoints, tickSigns, epsilon, tickOptions, style);
-  }//,
+    this.labels = new MathBox.Renderable.Labels(labelPoints, labelTangent, callback, labelOptions, style);
+  },
 
 });
 
@@ -5942,6 +5522,27 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     };
   },
 
+  make: function (materials) {
+    var options = this.get();
+
+    // Make material.
+    var material = this.material = materials.generic(options);
+
+    this._from = new THREE.Vector3();
+    this._to = new THREE.Vector3();
+
+    this.diff = new THREE.Vector3();
+    this.bi = new THREE.Vector3();
+    this.normal = new THREE.Vector3(0, 0, 1);
+
+    // Make cone mesh
+    var geometry = this.geometry = new THREE.CylinderGeometry(.33, 0, 1, 16, 1);
+    this.object = new THREE.Mesh(geometry, material);
+
+    // Refresh material uniforms.
+    this.refresh();
+  },
+
   adjust: function (viewport) {
     var options = this.get();
     var offset = options.offset;
@@ -6000,27 +5601,6 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
 
     MathBox.Renderable.prototype.adjust.call(this, viewport);
   },
-
-  make: function (materials) {
-    var options = this.get();
-
-    // Make material.
-    var material = this.material = materials.generic(options);
-
-    this._from = new THREE.Vector3();
-    this._to = new THREE.Vector3();
-
-    this.diff = new THREE.Vector3();
-    this.bi = new THREE.Vector3();
-    this.normal = new THREE.Vector3(0, 0, 1);
-
-    // Make cone mesh
-    var geometry = this.geometry = new THREE.CylinderGeometry(.33, 0, 1, 16, 1);
-    this.object = new THREE.Mesh(geometry, material);
-
-    // Refresh material uniforms.
-    this.refresh();
-  }//,
 
 });
 
@@ -6108,6 +5688,118 @@ MathBox.Renderable.Ticks.prototype = _.extend(new MathBox.Renderable(null), {
   }//,
 
 });
+/**
+ * Label, text labels anchored to points in 3D
+ *
+ * Note: uses CSS3D renderer classes, but positions overlays in 2D using the custom
+ * overlay class. This avoids fuzzy text and undesirable scaling of text.
+ */
+MathBox.Renderable.Labels = function (points, tangent, callback, options, style) {
+  this.points = points;
+  this.tangent = tangent;
+  this.callback = callback;
+
+  this.sprites = [];
+
+  MathBox.Renderable.call(this, options, style);
+};
+
+MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
+
+  defaults: function () {
+    return {
+      absolute: true,
+      distance: 15,
+      size: 1//,
+    };
+  },
+
+  make: function (materials) {
+    var options = this.get(),
+        points = this.points,
+        tangent = this.tangent,
+        sprites = this.sprites,
+        n = this.points.length;
+
+    // Reusable vector for later.
+    this._anchor = new THREE.Vector3();
+
+    // Make parent object to hold all the label divs in one Object3D.
+    var element = document.createElement('div');
+    var object = this.object = new MathBox.Sprite(element);
+    element.className = 'mathbox-labels';
+
+    // Make sprites for all labels
+    _.loop(n, function (i) {
+      // Nested div to allow for relative positioning for centering
+      var element = document.createElement('div');
+      var inner = document.createElement('div');
+      element.appendChild(inner);
+
+      // Sprite object
+      var sprite = new MathBox.Sprite(element, tangent);
+
+      // Position at anchor point
+      element.className = 'mathbox-label';
+      inner.className = 'mathbox-wrap';
+      inner.style.position = 'relative';
+      inner.style.display = 'inline-block';
+      inner.style.left = '-50%';
+      inner.style.top = '-.5em';
+
+      sprites.push(sprite);
+      object.add(sprite);
+    });
+
+    // Refresh material uniforms.
+    //this.refresh();
+  },
+
+  adjust: function (viewport, camera, width, height) {
+    var options = this.get(),
+        points = this.points,
+        sprites = this.sprites,
+        callback = this.callback,
+        anchor = this._anchor,
+        distance = options.distance;
+
+    // Update labels
+    _.each(sprites, function (sprite, i) {
+      // Transform anchor point
+      sprite.position.copy(points[i]);
+      viewport.to(sprite.position);
+      sprite.distance = options.distance;
+
+      // Set content
+      var text = '';
+      if (callback) {
+        // Get text
+        text = callback(i);
+        if (text === undefined) text = '';
+
+        // Try to cast to number and round to 2 decimals
+        if (+text == text) {
+          var x = +text;
+          if (x != 0) {
+            var s = x < 0 ? -1 : 1;
+            x = Math.abs(x);
+            var unit = Math.pow(10, 1 - Math.floor(Math.log(x)/Math.log(10)));
+            x = s * Math.round(unit * x) / unit;
+            text = x;
+          }
+        }
+      }
+      if (sprite.element.children[0].innerHTML !== text) {
+        sprite.element.children[0].innerHTML = text;
+      }
+    });
+
+    MathBox.Renderable.prototype.adjust.call(this, viewport);
+  },
+
+
+});
+
 /**
  * Generic viewport base class
  */

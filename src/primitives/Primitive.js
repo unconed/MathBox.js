@@ -11,9 +11,6 @@ MathBox.Primitive = function (options) {
   options = options || defaults;
   this.set(options);
 
-  // Holds instantiated renderables.
-  this.renders = [];
-
   // Holds persistent object styles
   this.style = new MathBox.Style();
   this.style.set(this.get().style || {});

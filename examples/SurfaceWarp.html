@@ -2,10 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>MathBox - Example: Intersection of 2D function in 3D.</title>
+  <title>MathBox - Example: Surface warping with polar viewport.</title>
 
   <!--
-    This example shows how you can use the polar viewport + a mapping function to render functions on the real projective line.
+    This example shows how surfaces can warp under viewport transforms with correct shading.
   -->
 
   <style type="text/css" media="screen">
@@ -84,7 +84,7 @@
         // Polar viewport
         .viewport({
           type: 'polar',
-          range: [[-1, 1], [-2, 5], [-1, 1]],
+          range: [[-π, π], [-3, 6], [-1, 1]],
           scale: [1, 1, 1],
           polar: 0,
         })
@@ -98,8 +98,8 @@
         // Surface function
         .surface({
           shaded: true,
-          domain: [[-1, 1], [-1, 1]],
-          n: [32, 32],
+          domain: [[-π, π], [-1, 1]],
+          n: [48, 32],
           expression: surfaceFunc,
         })
 
@@ -129,7 +129,7 @@
   // Arbitrary function
   function surfaceFunc(x, y) {
 
-    return [x, 3 + -1 + Math.cos(x*5) + Math.cos(y*5), y];
+    return [x, 4 + -1 + Math.cos(x*2) + Math.cos(y*5), y];
   }
 
   </script>
