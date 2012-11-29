@@ -84,30 +84,46 @@
         // Cartesian viewport
         .viewport({
           type: 'cartesian',
-          range: [[-4, 4], [-4, 4]],
+          range: [[-3, 3], [-2, 2], [-1, 1]],
           scale: [1, 1, 1],
         })
         .camera({
           orbit: 3.5,
-          phi: τ/4,
-          theta: 0,
+          phi: τ/6,
+          theta: 0.3,
         })
         .transition(300)
 
-        // Number line
+        // Axes
         .axis({
           axis: 0,
           color: 0xa0a0a0,
+          ticks: 5,
           lineWidth: 2,
-          size: .1,
+          size: .05,
         })
-        .curve({
-          n: 2,
-          data: [[0, .2], [0, -.2]],
+        .axis({
+          axis: 1,
           color: 0xa0a0a0,
-          points: false,
-          line: true,
+          ticks: 5,
           lineWidth: 2,
+          size: .05,
+          zero: false,
+        })
+        .axis({
+          axis: 2,
+          color: 0xa0a0a0,
+          ticks: 5,
+          lineWidth: 2,
+          size: .05,
+          zero: false,
+        })
+
+        // Grid
+        .grid({
+          axis: [0, 2],
+          color: 0xc0c0c0,
+          lineWidth: 1,
         })
 
       document.getElementById('info').style.opacity = '0';

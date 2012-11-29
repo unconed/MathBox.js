@@ -486,11 +486,18 @@ MathBox.Animator.Animation.prototype = {
  *
  * Has a mathematical viewport, contains mathematical primitives, can be added to a three.js scene.
  */
-MathBox.Stage = function (options, world, cssOverlay) {
+MathBox.Stage = function (options, world, overlay) {
   this.options = options || {};
 
   this._world = world;
-  this.cssOverlay = cssOverlay;
+
+  // Prepare overlay
+  this.overlay = overlay;
+  world.on('resize', function (width, height) {
+    this.overlay.size(width, height);
+    this.width = width;
+    this.height = height;
+  }.bind(this));
 
   // Create array to hold primitives
   this.primitives = [];
@@ -531,7 +538,10 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
   // Update before render.
   update: function () {
-    var viewport = this._viewport;
+    var viewport = this._viewport,
+        camera = this._world.tCamera(),
+        width = this.width,
+        height = this.height;
 
     // Apply running animations.
     this.animator.update();
@@ -542,15 +552,18 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Loop over all primitives.
     _.each(this.primitives, function (primitive) {
       // Adjust to viewport
-      primitive.adjust(viewport);
+      primitive.adjust(viewport, camera, width, height);
 
       // Loop over renderables
       var renderables = primitive.renderables();
       _.each(renderables, function (renderable) {
         // Adjust visible renderables to viewport
-        renderable.object && renderable.adjust(viewport);
+        renderable.object && renderable.adjust(viewport, camera, width, height);
       });
     });
+
+    // Update sprite overlay
+    this.overlay && this.overlay.update(camera);
   },
 
   /**
@@ -561,8 +574,14 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Overload Object3D.add
 
     if (object instanceof THREE.Object3D) {
-      // Add to three.js scene tree
-      return THREE.Object3D.prototype.add.call(this, object);
+      if (object instanceof MathBox.Sprite) {
+        // Add to 2D overlay
+        return this.overlay.add(object);
+      }
+      else {
+        // Add to three.js scene tree
+        return THREE.Object3D.prototype.add.call(this, object);
+      }
     }
     else {
       // Add to mathbox.
@@ -588,8 +607,14 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Overload Object3D.remove
 
     if (object instanceof THREE.Object3D) {
-      // Remove from three.js scene tree
-      return THREE.Object3D.prototype.remove.call(this, object);
+      if (object instanceof MathBox.Sprite) {
+        // Remove from 2D overlay
+        return this.overlay.remove(object);
+      }
+      else {
+        // Remove from three.js scene tree
+        return THREE.Object3D.prototype.remove.call(this, object);
+      }
     }
     else {
 
@@ -1147,9 +1172,17 @@ MathBox.Materials.prototype = {
 };
 /**
  * Helper to place equally spaced ticks in a range at sensible positions.
+ *
+ * @param min/max - Minimum and maximum of range
+ * @param n - Desired number of ticks in range
+ * @param scale - Multiplier for base steps of scale (e.g. 1 or π).
+ * @param inclusive - Whether to add ticks at the edges
+ * @param bias - Integer to bias divisions one or more levels up or down (to create nested scales)
  */
-MathBox.Ticks = function (min, max, n, scale, inclusive) {
+MathBox.Ticks = function (min, max, n, scale, inclusive, bias) {
+  // Desired
   n = n || 10;
+  bias = bias || 0;
 
   // Calculate naive tick size.
   var span = max - min;
@@ -1158,7 +1191,7 @@ MathBox.Ticks = function (min, max, n, scale, inclusive) {
   // Round to the floor'd power of ten (or two, for pi-ticks).
   scale = scale || 1;
   var base = scale == π ? 2 : 10;
-  var ref = scale * Math.pow(base, Math.floor(Math.log(ideal / scale) / Math.log(base)));
+  var ref = scale * (bias + Math.pow(base, Math.floor(Math.log(ideal / scale) / Math.log(base))));
 
   // Make derived steps at sensible factors.
   var factors = base == π ? [1] : [5, 1, .5];
@@ -1183,34 +1216,29 @@ MathBox.Ticks = function (min, max, n, scale, inclusive) {
   return ticks;
 };
 
-MathBox.TicksLog = function (min, max, n, base, inclusive) {
+MathBox.TicksLog = function (min, max, n, base, inclusive, bias) {
   // TODO: Tick equally in log space
   // Convert fractional part into floor(log)*(1+fraction)
 };/**
  * World.mathBox() – Create a mathbox-capable renderer inside a DOM element.
  */
-tQuery.World.register('mathBox', function (element, options) {
+tQuery.World.registerInstance('mathBox', function (element, options) {
   element = element || document.body;
 
   // Create threebox scene for WebGL
   this.threeBox(element, options);
 
-  // Create CSS 3D overlay for labels / annotations
-  var cssOverlay = new Acko.CSS3DRenderer();
-  element.appendChild(cssOverlay.domElement);
-  cssOverlay.domElement.style.position = 'absolute';
-  cssOverlay.domElement.style.left = 0;
-  cssOverlay.domElement.style.top = 0;
-  cssOverlay.domElement.style.right = 0;
-  cssOverlay.domElement.style.bottom = 0;
-
-  // Auto-size overlay
-  this.on('resize', function (width, height) {
-    cssOverlay.setSize(width, height);
-  });
+  // Create overlay for labels / annotations
+  var overlay = new MathBox.Overlay();
+  element.appendChild(overlay.domElement);
+  overlay.domElement.style.position = 'absolute';
+  overlay.domElement.style.left = 0;
+  overlay.domElement.style.top = 0;
+  overlay.domElement.style.right = 0;
+  overlay.domElement.style.bottom = 0;
 
   // Create mathbox stage
-  var mathbox = new MathBox.Stage(options, this, cssOverlay);
+  var mathbox = new MathBox.Stage(options, this, overlay);
   var callback = function () {
     mathbox.update();
   };
@@ -1607,7 +1635,184 @@ MathBox.CameraProxy = function (world, options) {
   controls.update();
 }
 
-MathBox.Attributes.mixin(MathBox.CameraProxy);MathBox.Primitive = function (options) {
+MathBox.Attributes.mixin(MathBox.CameraProxy);/**
+ * MathBox Overlay
+ *
+ * Positions 2D labels on top of the scene and takes care of overlap.
+ */
+MathBox.Overlay = function () {
+  var element = this.domElement = document.createElement('div');
+
+  element.className = 'mathbox-overlay';
+
+  this.sprites = [];
+  this.v = new THREE.Vector3();
+  this.q = new THREE.Vector3();
+}
+
+MathBox.Overlay.prototype = {
+
+  size: function (width, height) {
+    this.width = width;
+    this.height = height;
+
+    this.domElement.style.width = width +'px';
+    this.domElement.style.height = height +'px';
+  },
+
+  add: function (object) {
+    if (this.sprites.indexOf(object) != -1) return;
+    this.sprites.push(object);
+
+    if (!object.element.parentNode) {
+      this.domElement.appendChild(object.element);
+    }
+
+    _.each(object.children, function (child) {
+      this.add(child);
+    }.bind(this))
+  },
+
+  remove: function (object) {
+    var index;
+    if ((index = this.sprites.indexOf(object)) == -1) return;
+    this.sprites.splice(index, 1);
+
+    if (object.element.parentNode) {
+      object.element.parentNode.removeChild(object.element);
+    }
+
+    _.each(object.children, function (child) {
+      this.remove(child);
+    }.bind(this))
+  },
+
+  update: function (camera) {
+		this.fov = 0.5 / Math.tan( camera.fov * Math.PI / 360 ) * this.height;
+
+    // Iterate over individual objects for update
+    _.each(this.sprites, function (sprite) {
+      this._update(sprite, camera);
+    }.bind(this));
+
+    // Iterate over individual objects for measurement
+    _.each(this.sprites, function (sprite) {
+      this._measure(sprite, camera);
+    }.bind(this));
+
+    // Iterate over individual objects for measurement
+    _.each(this.sprites, function (sprite) {
+      this._vis(sprite, camera);
+    }.bind(this));
+  },
+
+  _measure: function (object, camera) {
+    // Measure sprites
+    var element = object.element;
+    object.width = element.offsetWidth;
+    object.height = element.offsetHeight;
+  },
+
+  _vis: function (object, camera) {
+    // If already hidden, ignore
+    if (!object.visible) return;
+    if (!object.width && !object.height) return;
+
+    // Check visibility for each sprite relative to other visibles
+    var ox1 = object.left,
+        oy1 = object.top,
+        ox2 = object.width + ox1,
+        oy2 = object.height + oy1;
+
+    // Iterate only sprites after this one
+    found = false;
+    _.each(this.sprites, function (sprite) {
+      if (sprite === object) {
+        found = true;
+        return;
+      }
+      if (!found) return;
+      if (!sprite.visible) return;
+
+      var sx1 = sprite.left,
+          sy1 = sprite.top,
+          sx2 = sprite.width + sx1,
+          sy2 = sprite.height + sy1;
+
+      // Check for overlap in X or Y
+      if (ox2 < sx1 || ox1 > sx2) return;
+      if (oy2 < sy1 || oy1 > sy2) return;
+
+      // Hide
+      if (sprite.visible) {
+        sprite.element.style.display = 'none';
+        sprite.visible = false;
+      }
+    });
+  },
+
+  _update: function (object, camera) {
+    var v = this.v,
+        q = this.q,
+        epsilon = 0.01;
+
+    // Transform into camera space
+    v.copy(object.position);
+    camera.matrixWorldInverse.multiplyVector3(v);
+
+    // Project to 2D and convert to pixels
+    var x = -(v.x / v.z) * this.fov + this.width  * .5;
+    var y =  (v.y / v.z) * this.fov + this.height * .5;
+
+    // Add spacer
+    if (object.distance) {
+      // Add tangent and project again
+      q.copy(object.tangent).multiplyScalar(epsilon);
+      q.addSelf(object.position);
+      camera.matrixWorldInverse.multiplyVector3(q);
+
+      // Find difference and scale it
+      q.subSelf(v);
+      q.z = 0;
+      q.normalize().multiplyScalar(object.distance);
+      x += (q.y);
+      y += (q.x);
+    }
+
+    // Round to avoid pixel fuzzyness
+    x = Math.round(x);
+    y = Math.round(y);
+
+    // Set position and reset visibility
+    object.left = x;
+    object.top = y;
+    object.element.style.left = x + 'px';
+    object.element.style.top  = y + 'px';
+    object.element.style.display = 'block';
+    object.visible = true;
+
+  },
+
+};
+
+MathBox.Sprite = function (element, tangent, distance) {
+  this.element = element;
+  this.tangent = tangent || new THREE.Vector3(1, 0, 0);
+  this.distance = distance || 0;
+  this.width = 0;
+  this.height = 0;
+  this.visible = true;
+
+  element.style.position = 'absolute';
+  element.style.left = 0;
+  element.style.top = 0;
+
+  THREE.Object3D.call(this);
+}
+
+MathBox.Sprite.prototype = _.extend(new THREE.Object3D(), {
+  
+});MathBox.Primitive = function (options) {
   // Allow inheritance constructor
   if (options === null) return;
 
@@ -1619,9 +1824,6 @@ MathBox.Attributes.mixin(MathBox.CameraProxy);MathBox.Primitive = function (opti
   }
   options = options || defaults;
   this.set(options);
-
-  // Holds instantiated renderables.
-  this.renders = [];
 
   // Holds persistent object styles
   this.style = new MathBox.Style();
@@ -1892,40 +2094,46 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       axis: 0,
       offset: [0, 0, 0],
       n: 2,
+      labels: false,
       ticks: 10,
       tickBase: 1,
       arrow: true,
       size: .07,
       style: {
         lineWidth: 4,
-        color: new THREE.Color(0x707070)//,
-      }//,
+        color: new THREE.Color(0x707070),
+      },
+      zero: true,
     };
   },
 
   renderables: function () {
-    return [ this.line, this.ticks, this.arrow ];
+    return [ this.line, this.ticks, this.arrow, this.labels ];
   },
 
   type: function () {
     return 'axis';
   },
 
-  adjust: function (viewport) {
+  adjust: function (viewport, camera) {
     var options = this.get(),
         axis = options.axis,
         offset = options.offset,
         arrow = options.arrow,
         size = options.size,
+        labels = options.labels,
         ticks = options.ticks,
         tickBase = options.tickBase,
         n = options.n,
         points = this.points,
+        labelPoints = this.labelPoints,
+        labelTangent = this.labelTangent,
         tickPoints = this.tickPoints,
         tickSigns = this.tickSigns;
 
     var p = [0, 0, 0],
-        add = new THREE.Vector3();
+        add = new THREE.Vector3(),
+        four = new THREE.Vector4();
 
     // Prepare axis extents.
     var range = viewport.axis(axis),
@@ -1947,10 +2155,12 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     // Show/hide arrow
     this.arrow.show(arrow);
 
+    // Prepare scale divisions
+    var scale = this.scale = MathBox.Ticks(min, max, ticks, tickBase, true);
+
     // Prepare tick marks range/scale.
     this.ticks.show(!!ticks);
     if (ticks) {
-      var scale = MathBox.Ticks(min, max, ticks, tickBase, true);
       var limit = Math.floor(tickPoints.length / 2);
       if (scale.length > limit) scale = scale.slice(0, limit);
 
@@ -1962,19 +2172,24 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       // Place uniformly spaced pairs of points for ticks.
       var p = [0, 0, 0], mn = 100, mx = -100;
       _.each(scale, function (x, i) {
-        i = i*2;
         p[axis] = x;
 
-        tickPoints[i].set.apply(tickPoints[i], p);
-        tickPoints[i].addSelf(add);
-        tickSigns[i] = 1;
+        // Tick points for ticks (2 each)
+        var j = i*2;
+        tickPoints[j].set.apply(tickPoints[j], p);
+        tickPoints[j].addSelf(add);
+        tickSigns[j] = 1;
 
-        tickPoints[i+1].copy(tickPoints[i]);
-        tickSigns[i+1] = -1;
+        tickPoints[j+1].copy(tickPoints[j]);
+        tickSigns[j+1] = -1;
 
-        last = i + 1;
+        // Anchor points for label
+        labelPoints[i].copy(tickPoints[j]);
+
+        last = j + 1;
       });
 
+      // Fill remaining vertices with last point
       var i = last + 1, n = tickPoints.length;
       while (i < n) {
         tickPoints[i].copy(tickPoints[last]);
@@ -1982,7 +2197,12 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
         i++;
       }
     }
-    window.ij = true;
+
+    // Axis vector direction for labels
+    p = [0, 0, 0];
+    p[axis] = 1;
+    labelTangent.set.apply(labelTangent, p);
+    this.labels.show(!!labels);
   },
 
   make: function () {
@@ -1992,29 +2212,44 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
         size = options.size,
         ticks = options.ticks,
         style = this.style,
-        points = this.points = [],
-        tickPoints = this.tickPoints = [],
-        tickSigns = this.tickSigns = [],
+        points = this.points = [], // Points for drawing lines
+        labelPoints = this.labelPoints = [], // Points for attaching labels
+        labelTangent = this.labelTangent = new THREE.Vector3(), // Orientation for points and labels
+        tickPoints = this.tickPoints = [], // Points for drawing ticks (doubled)
+        tickSigns = this.tickSigns = [], // Alternating signs for tick shader
         epsilon = this.epsilon = new THREE.Vector3();
 
     // Prepare arrays of vertices.
     _.loop(n, function (x) {
       points.push(new THREE.Vector3());
     });
+    _.loop(ticks * 4, function (i) {
+      labelPoints.push(new THREE.Vector3());
+    });
     _.loop(ticks * 8, function (i) {
       tickPoints.push(new THREE.Vector3());
       tickSigns.push(1);
     });
 
+    // Prepare primitives
     var meshOptions = { dynamic: true, type: 'line' };
     var arrowOptions = { dynamic: true, size: options.size, offset: .5 };
     var tickOptions = { dynamic: true, size: options.size * .2 };
+    var labelOptions = { dynamic: true };
 
-    // Line, arrowhead and tick marks.
+    // Scale label callback
+    var callback = function (i) {
+      var x = this.scale[i];
+      if (x == 0 && !options.zero) return '';
+      return x;
+    }.bind(this);
+
+    // Line, arrowhead, tick marks and labels.
     this.line = new MathBox.Renderable.Mesh(points, meshOptions, style);
     this.arrow = new MathBox.Renderable.ArrowHead(points[n - 2], points[n - 1], arrowOptions, style);
     this.ticks = new MathBox.Renderable.Ticks(tickPoints, tickSigns, epsilon, tickOptions, style);
-  }//,
+    this.labels = new MathBox.Renderable.Labels(labelPoints, labelTangent, callback, labelOptions, style);
+  },
 
 });
 
@@ -2900,6 +3135,27 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     };
   },
 
+  make: function (materials) {
+    var options = this.get();
+
+    // Make material.
+    var material = this.material = materials.generic(options);
+
+    this._from = new THREE.Vector3();
+    this._to = new THREE.Vector3();
+
+    this.diff = new THREE.Vector3();
+    this.bi = new THREE.Vector3();
+    this.normal = new THREE.Vector3(0, 0, 1);
+
+    // Make cone mesh
+    var geometry = this.geometry = new THREE.CylinderGeometry(.33, 0, 1, 16, 1);
+    this.object = new THREE.Mesh(geometry, material);
+
+    // Refresh material uniforms.
+    this.refresh();
+  },
+
   adjust: function (viewport) {
     var options = this.get();
     var offset = options.offset;
@@ -2958,27 +3214,6 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
 
     MathBox.Renderable.prototype.adjust.call(this, viewport);
   },
-
-  make: function (materials) {
-    var options = this.get();
-
-    // Make material.
-    var material = this.material = materials.generic(options);
-
-    this._from = new THREE.Vector3();
-    this._to = new THREE.Vector3();
-
-    this.diff = new THREE.Vector3();
-    this.bi = new THREE.Vector3();
-    this.normal = new THREE.Vector3(0, 0, 1);
-
-    // Make cone mesh
-    var geometry = this.geometry = new THREE.CylinderGeometry(.33, 0, 1, 16, 1);
-    this.object = new THREE.Mesh(geometry, material);
-
-    // Refresh material uniforms.
-    this.refresh();
-  }//,
 
 });
 
@@ -3066,6 +3301,118 @@ MathBox.Renderable.Ticks.prototype = _.extend(new MathBox.Renderable(null), {
   }//,
 
 });
+/**
+ * Label, text labels anchored to points in 3D
+ *
+ * Note: uses CSS3D renderer classes, but positions overlays in 2D using the custom
+ * overlay class. This avoids fuzzy text and undesirable scaling of text.
+ */
+MathBox.Renderable.Labels = function (points, tangent, callback, options, style) {
+  this.points = points;
+  this.tangent = tangent;
+  this.callback = callback;
+
+  this.sprites = [];
+
+  MathBox.Renderable.call(this, options, style);
+};
+
+MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
+
+  defaults: function () {
+    return {
+      absolute: true,
+      distance: 15,
+      size: 1//,
+    };
+  },
+
+  make: function (materials) {
+    var options = this.get(),
+        points = this.points,
+        tangent = this.tangent,
+        sprites = this.sprites,
+        n = this.points.length;
+
+    // Reusable vector for later.
+    this._anchor = new THREE.Vector3();
+
+    // Make parent object to hold all the label divs in one Object3D.
+    var element = document.createElement('div');
+    var object = this.object = new MathBox.Sprite(element);
+    element.className = 'mathbox-labels';
+
+    // Make sprites for all labels
+    _.loop(n, function (i) {
+      // Nested div to allow for relative positioning for centering
+      var element = document.createElement('div');
+      var inner = document.createElement('div');
+      element.appendChild(inner);
+
+      // Sprite object
+      var sprite = new MathBox.Sprite(element, tangent);
+
+      // Position at anchor point
+      element.className = 'mathbox-label';
+      inner.className = 'mathbox-wrap';
+      inner.style.position = 'relative';
+      inner.style.display = 'inline-block';
+      inner.style.left = '-50%';
+      inner.style.top = '-.5em';
+
+      sprites.push(sprite);
+      object.add(sprite);
+    });
+
+    // Refresh material uniforms.
+    //this.refresh();
+  },
+
+  adjust: function (viewport, camera, width, height) {
+    var options = this.get(),
+        points = this.points,
+        sprites = this.sprites,
+        callback = this.callback,
+        anchor = this._anchor,
+        distance = options.distance;
+
+    // Update labels
+    _.each(sprites, function (sprite, i) {
+      // Transform anchor point
+      sprite.position.copy(points[i]);
+      viewport.to(sprite.position);
+      sprite.distance = options.distance;
+
+      // Set content
+      var text = '';
+      if (callback) {
+        // Get text
+        text = callback(i);
+        if (text === undefined) text = '';
+
+        // Try to cast to number and round to 2 decimals
+        if (+text == text) {
+          var x = +text;
+          if (x != 0) {
+            var s = x < 0 ? -1 : 1;
+            x = Math.abs(x);
+            var unit = Math.pow(10, 1 - Math.floor(Math.log(x)/Math.log(10)));
+            x = s * Math.round(unit * x) / unit;
+            text = x;
+          }
+        }
+      }
+      if (sprite.element.children[0].innerHTML !== text) {
+        sprite.element.children[0].innerHTML = text;
+      }
+    });
+
+    MathBox.Renderable.prototype.adjust.call(this, viewport);
+  },
+
+
+});
+
 /**
  * Generic viewport base class
  */

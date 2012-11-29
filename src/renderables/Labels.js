@@ -4,9 +4,9 @@
  * Note: uses CSS3D renderer classes, but positions overlays in 2D using the custom
  * overlay class. This avoids fuzzy text and undesirable scaling of text.
  */
-MathBox.Renderable.Labels = function (points, spacer, callback, options, style) {
+MathBox.Renderable.Labels = function (points, tangent, callback, options, style) {
   this.points = points;
-  this.spacer = spacer;
+  this.tangent = tangent;
   this.callback = callback;
 
   this.sprites = [];
@@ -19,6 +19,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
   defaults: function () {
     return {
       absolute: true,
+      distance: 15,
       size: 1//,
     };
   },
@@ -26,23 +27,35 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
   make: function (materials) {
     var options = this.get(),
         points = this.points,
+        tangent = this.tangent,
         sprites = this.sprites,
         n = this.points.length;
 
     // Reusable vector for later.
     this._anchor = new THREE.Vector3();
 
-    // Make parent object to hold all the labels.
+    // Make parent object to hold all the label divs in one Object3D.
     var element = document.createElement('div');
     var object = this.object = new MathBox.Sprite(element);
-    element.className = 'mathbox-dummy';
+    element.className = 'mathbox-labels';
 
     // Make sprites for all labels
     _.loop(n, function (i) {
+      // Nested div to allow for relative positioning for centering
       var element = document.createElement('div');
-      var sprite = new MathBox.Sprite(element);
+      var inner = document.createElement('div');
+      element.appendChild(inner);
 
+      // Sprite object
+      var sprite = new MathBox.Sprite(element, tangent);
+
+      // Position at anchor point
       element.className = 'mathbox-label';
+      inner.className = 'mathbox-wrap';
+      inner.style.position = 'relative';
+      inner.style.display = 'inline-block';
+      inner.style.left = '-50%';
+      inner.style.top = '-.5em';
 
       sprites.push(sprite);
       object.add(sprite);
@@ -52,23 +65,42 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
     //this.refresh();
   },
 
-  adjust: function (viewport, cameraProxy, width, height) {
+  adjust: function (viewport, camera, width, height) {
     var options = this.get(),
         points = this.points,
         sprites = this.sprites,
         callback = this.callback,
-        anchor = this._anchor;
+        anchor = this._anchor,
+        distance = options.distance;
 
     // Update labels
     _.each(sprites, function (sprite, i) {
       // Transform anchor point
       sprite.position.copy(points[i]);
       viewport.to(sprite.position);
+      sprite.distance = options.distance;
 
       // Set content
-      var text = callback && callback(i) || '';
-      if (sprite.element.innerHTML != text) {
-        sprite.element.innerHTML = text;
+      var text = '';
+      if (callback) {
+        // Get text
+        text = callback(i);
+        if (text === undefined) text = '';
+
+        // Try to cast to number and round to 2 decimals
+        if (+text == text) {
+          var x = +text;
+          if (x != 0) {
+            var s = x < 0 ? -1 : 1;
+            x = Math.abs(x);
+            var unit = Math.pow(10, 1 - Math.floor(Math.log(x)/Math.log(10)));
+            x = s * Math.round(unit * x) / unit;
+            text = x;
+          }
+        }
+      }
+      if (sprite.element.children[0].innerHTML !== text) {
+        sprite.element.children[0].innerHTML = text;
       }
     });
 

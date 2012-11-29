@@ -2,10 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>MathBox - Example: Intersection of 2D function in 3D.</title>
+  <title>MathBox - Example: Complex 4D surface projected down to 3D.</title>
 
   <!--
-    This example shows intersecting surfaces creating implicit curves.
+    This example shows a complex 4D surface projected down to 3D
   -->
 
   <style type="text/css" media="screen">
@@ -130,10 +130,9 @@
 
   // Complex exponentiation function, projected down to 3D
   function surfaceFunc(x, y) {
-    
     var p = π/2;
     var z = Math.exp(x);
-    
+
     return [
       Math.cos(y) * z + Math.cos(p) * y,
       Math.sin(y) * z,

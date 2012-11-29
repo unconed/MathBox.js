@@ -57,7 +57,6 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
   update: function () {
     var viewport = this._viewport,
         camera = this._world.tCamera(),
-        cameraProxy = this.cameraProxy,
         width = this.width,
         height = this.height;
 
@@ -70,13 +69,13 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Loop over all primitives.
     _.each(this.primitives, function (primitive) {
       // Adjust to viewport
-      primitive.adjust(viewport, cameraProxy, width, height);
+      primitive.adjust(viewport, camera, width, height);
 
       // Loop over renderables
       var renderables = primitive.renderables();
       _.each(renderables, function (renderable) {
         // Adjust visible renderables to viewport
-        renderable.object && renderable.adjust(viewport, cameraProxy, width, height);
+        renderable.object && renderable.adjust(viewport, camera, width, height);
       });
     });
 
