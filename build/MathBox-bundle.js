@@ -42978,7 +42978,7 @@ MathBox.Overlay.prototype = {
 
   _vis: function (object, camera) {
     // If already hidden, ignore
-    if (!object.visible) return;
+    if (!object.render) return;
     if (!object.width && !object.height) return;
 
     // Check visibility for each sprite relative to other visibles
@@ -42995,7 +42995,7 @@ MathBox.Overlay.prototype = {
         return;
       }
       if (!found) return;
-      if (!sprite.visible) return;
+      if (!sprite.render) return;
 
       var sx1 = sprite.left,
           sy1 = sprite.top,
@@ -43007,10 +43007,8 @@ MathBox.Overlay.prototype = {
       if (oy2 < sy1 || oy1 > sy2) return;
 
       // Hide
-      if (sprite.visible) {
-        sprite.element.style.display = 'none';
-        sprite.visible = false;
-      }
+      sprite.element.style.display = 'none';
+      sprite.render = false;
     });
   },
 
@@ -43018,6 +43016,19 @@ MathBox.Overlay.prototype = {
     var v = this.v,
         q = this.q,
         epsilon = 0.01;
+
+    // Check visibility
+    var visible = object.visible, parent = object.parent;
+    while (visible && parent) {
+      visible = visible && parent.visible;
+      parent = parent.parent;
+    }
+    object.render = visible;
+
+    if (!object.render) {
+      object.element.style.display = 'none';
+      return;
+    }
 
     // Transform into camera space
     v.copy(object.position);
@@ -43038,21 +43049,20 @@ MathBox.Overlay.prototype = {
       q.subSelf(v);
       q.z = 0;
       q.normalize().multiplyScalar(object.distance);
-      x += (q.y);
-      y += (q.x);
+      x += Math.abs(q.y);
+      y += Math.abs(q.x);
     }
 
     // Round to avoid pixel fuzzyness
     x = Math.round(x);
     y = Math.round(y);
 
-    // Set position and reset visibility
+    // Set position
     object.left = x;
     object.top = y;
     object.element.style.left = x + 'px';
     object.element.style.top  = y + 'px';
     object.element.style.display = 'block';
-    object.visible = true;
 
   },
 
@@ -44436,7 +44446,7 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
       return;
     }
     else {
-      this.object.visible = true;
+      this.object.visible = this.visible;
     }
 
     diff = diff.normalize();

@@ -56,7 +56,7 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
       return;
     }
     else {
-      this.object.visible = true;
+      this.object.visible = this.visible;
     }
 
     diff = diff.normalize();
