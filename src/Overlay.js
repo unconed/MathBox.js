@@ -175,6 +175,7 @@ MathBox.Sprite = function (element, tangent, distance) {
   this.width = 0;
   this.height = 0;
   this.visible = true;
+  this.content = '';
 
   element.style.position = 'absolute';
   element.style.left = 0;

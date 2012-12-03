@@ -8,6 +8,7 @@ MathBox.Vector = function (options) {
   MathBox.Primitive.call(this, options);
 
   this.render = [];
+  this.arrows = [];
   this.vertices = null;
   this.points = null;
   this.line = null;
@@ -19,6 +20,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     return {
       n: 1,
       data: null,
+      arrow: true,
       expression: function () { return 0; },
       live: true,
       style: {},
@@ -38,6 +40,9 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     var options = this.get();
     // Bug: Vector foreshortening requires live to be always-on
     (true || options.live) && this.calculate(viewport);
+    _.each(this.arrows, function (arrow) {
+      arrow.show(options.arrow);
+    });
   },
 
   make: function () {
@@ -49,6 +54,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     var vertices = this.vertices = [];
     var points = this.points = [];
     var render = this.render = [];
+    var arrows = this.arrows = [];
 
     var lineOptions = { dynamic: options.live, type: 'line', strip: false };
     var arrowOptions = { size: options.size };
@@ -64,6 +70,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
       var arrowhead = new MathBox.Renderable.ArrowHead(points[i++], points[i++], arrowOptions, style);
       render.push(arrowhead);
+      arrows.push(arrowhead);
     });
 
     this.line = new MathBox.Renderable.Mesh(vertices, lineOptions, style);
@@ -79,22 +86,14 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         points = this.points,
         options = this.get(),
         data = options.data,
+        arrow = options.arrow,
         style = options.style,
         n = options.n,
         size = options.size;
 
-    // Line segment foreshortening
-    var fv = new THREE.Vector3(1, 1, 1);
-    var diff = new THREE.Vector3();
-
     // Find necessary foreshortening factors so line does not stick out through the arrowhead.
-    if (viewport) {
-      var matrix = viewport.transform.elements;
-      var fx = size/2 / Math.abs(matrix[0]);
-      var fy = size/2 / Math.abs(matrix[5]);
-      var fz = size/2 / Math.abs(matrix[10]);
-      fv.set(fx, fy, fz);
-    }
+    var last = new THREE.Vector3(),
+        current = new THREE.Vector3();
 
     var j = 0, k = 0;
     _.loop(n * 2, function (i) {
@@ -116,19 +115,22 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
       // Shorten line segment to make room for arrow
       vertices[i].set.apply(vertices[i], p);
-      if (i % 2 == 1) {
-        // Find foreshortening factor in vector's direction.
-        diff.sub(vertices[i], vertices[i - 1]);
-        diff.x = Math.abs(diff.x);
-        diff.y = Math.abs(diff.y);
-        diff.z = Math.abs(diff.z);
-        var l = diff.lengthManhattan();
-        var f = 1 - diff.dot(fv) / l / diff.length();
+      if (viewport && arrow && (i % 2 == 1)) {
+        // Find vector's world-space length
+        current.copy(vertices[i]);
+        last.copy(vertices[i-1]);
+        viewport.to(current);
+        viewport.to(last);
+        current.subSelf(last);
+        var l = current.length();
 
-        // Scale vector.
-        diff.sub(vertices[i], vertices[i - 1]);
-        diff.multiplyScalar(f);
-        vertices[i].add(vertices[i - 1], diff);
+        // Foreshorten line
+        var f = l - size;
+        current.normalize().multiplyScalar(f).addSelf(last);
+
+        // Transform back
+        viewport.from(current);
+        vertices[i].copy(current);
       }
 
       // Start/end + vector indices

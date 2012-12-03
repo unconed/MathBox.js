@@ -71,7 +71,10 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         sprites = this.sprites,
         callback = this.callback,
         anchor = this._anchor,
-        distance = options.distance;
+        distance = options.distance,
+        style = this.style;
+
+    var mathjax = window.MathJax && MathJax.Hub;
 
     // Update labels
     _.each(sprites, function (sprite, i) {
@@ -79,6 +82,9 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
       sprite.position.copy(points[i]);
       viewport.to(sprite.position);
       sprite.distance = options.distance;
+
+      // Set opacity
+      sprite.element.style.opacity = style.get('opacity');
 
       // Set content
       var text = '';
@@ -99,8 +105,19 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
           }
         }
       }
-      if (sprite.element.children[0].innerHTML !== text) {
-        sprite.element.children[0].innerHTML = text;
+
+      if (sprite.content !== text) {
+        var inner = sprite.element.children[0];
+
+        sprite.content = text;
+
+        if (mathjax) {
+          inner.innerHTML = "\\(" + text + "\\)";
+          MathJax.Hub.queue.Push(["Typeset", MathJax.Hub, inner]);
+        }
+        else {
+          inner.innerHTML = text;
+        }
       }
     });
 

@@ -16,6 +16,7 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       offset: [0, 0, 0],
       n: 2,
       labels: false,
+      distance: 15,
       ticks: 10,
       tickBase: 1,
       arrow: true,
@@ -156,7 +157,7 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     var meshOptions = { dynamic: true, type: 'line' };
     var arrowOptions = { dynamic: true, size: options.size, offset: .5 };
     var tickOptions = { dynamic: true, size: options.size * .2 };
-    var labelOptions = { dynamic: true };
+    var labelOptions = { dynamic: true, distance: options.distance };
 
     // Scale label callback
     var callback = function (i) {

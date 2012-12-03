@@ -8,6 +8,7 @@ MathBox.Director = function (stage, script) {
   this._stage = stage;
   this.script = script;
   this.rollback = {};
+  this.clocks = {};
 
   this.step = 0;
   this.lastCommand = 0;
@@ -16,12 +17,21 @@ MathBox.Director = function (stage, script) {
 MathBox.Director.prototype = {
 
   /**
+   * Get clock for slide
+   */
+  clock: function (step, reset) {
+    if (reset || !this.clocks[step]) this.clocks[step] = +new Date();
+    return (+new Date() - this.clocks[step]) * .001;
+  },
+
+  /**
    * Invert the given operation (which hasn't been applied yet).
    */
   invert: function (op) {
     var stage = this._stage;
 
-    var inverse = [];
+    var inverse = [],
+        targets;
 
     var verb = op[0],
         selector = op[1],
@@ -31,10 +41,16 @@ MathBox.Director.prototype = {
 
     switch (verb) {
       case 'add':
-        inverse.push([
-          'remove',
-          options.sequence || (MathBox.Primitive.sequence + 1),
-        ]);
+        targets = [0];
+        // Fall through
+      case 'clone':
+        targets = targets || stage.select(selector);
+        _.each(targets, function (target, i) {
+          inverse.push([
+            'remove',
+            options.sequence || (MathBox.Primitive.sequence + 1 + i),
+          ]);
+        })
         break;
 
       case 'remove':
@@ -78,6 +94,8 @@ MathBox.Director.prototype = {
           options = op[2] || {},
           animate = op[3] || {};
 
+      if (verb == 'remove') animate = options;
+
       if (rollback) {
         var inverse = this.invert(op);
         var args = [0, 0].concat(inverse);
@@ -90,21 +108,20 @@ MathBox.Director.prototype = {
           animate.delay = 0;
           animate.duration = Math.min(300, animate.duration);
         }
-        if (options) {
-          options = _.extend({}, options);
-          options.delay = 0;
-          options.duration = Math.min(300, options.duration);
-        }
       }
 
       switch (verb) {
+        case 'clone':
+          stage.clone(selector, options, animate);
+          break;
+
         case 'add':
           var primitive = stage.spawn(selector, options, animate);
           break;
 
         case 'remove':
           _.each(stage.select(selector), function (primitive) {
-            stage.remove(primitive, options);
+            stage.remove(primitive, animate);
           });
           break;
 
@@ -112,7 +129,7 @@ MathBox.Director.prototype = {
           var targets = stage.select(selector);
           var array = options.constructor == Array;
           _.each(targets, function (target, i) {
-            target.set(array ? options[i] : options);
+            stage.set(target, array ? options[i] : options);
           });
           break;
 
@@ -145,6 +162,26 @@ MathBox.Director.prototype = {
     this.forward();
 
     return this;
+  },
+
+  /**
+   * Is at the given step.
+   */
+  is: function (step) {
+    if (!this.script.length) return false;
+
+    while (step < 0) step += this.script.length + 1;
+    while (step >= this.script.length + 1) step -= this.script.length + 1;
+
+    return step == this.step
+  },
+
+  isFirst: function () {
+    return this.is(0);
+  },
+
+  isLast: function () {
+    return this.is(-1);
   },
 
   /**
@@ -184,6 +221,8 @@ MathBox.Director.prototype = {
 
     this.apply(step, rollback, instant || this.skipping());
     this.step++;
+
+    this.clock(this.step, true);
 
     this.emit('go', this.step, 1);
 

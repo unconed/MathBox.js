@@ -7,6 +7,8 @@ MathBox.Animator = function () {
   this.active = [];
 };
 
+MathBox.Animator.now = 0;
+
 MathBox.Animator.prototype = {
 
   /**
@@ -166,6 +168,8 @@ MathBox.Animator.prototype = {
    * Update all currently running animations.
    */
   update: function () {
+    MathBox.Animator.now = +new Date(); // Use synchronized clock
+
     _.each(this.active, function (object) {
       _.each(object.__queue, function update(queue, key) {
         // Write out animated attribute.
@@ -200,13 +204,13 @@ MathBox.Animator.Delay = function (object, key, duration) {
 MathBox.Animator.Delay.prototype = {
 
   init: function () {
-    this.start = +new Date();
+    this.start = MathBox.Animator.now;
   },
 
   apply: function () {
     if (!this.start) this.init();
     if (this.duration > 0) {
-      this.fraction = Math.min(1, (+new Date() - this.start) / this.duration);
+      this.fraction = Math.min(1, (MathBox.Animator.now - this.start) / this.duration);
     }
     else {
       this.fraction = 1;
@@ -240,7 +244,7 @@ MathBox.Animator.Animation = function (object, key, value, duration, callback, e
 MathBox.Animator.Animation.prototype = {
 
   init: function () {
-    this.start = +new Date();
+    this.start = MathBox.Animator.now;
     if (this.from === null) this.from = this.object.get(this.key);
     if (this.from === undefined) {
       this.from = 0;
@@ -259,7 +263,7 @@ MathBox.Animator.Animation.prototype = {
     // Calculate animation progress / fraction.
     var fraction;
     if (this.duration > 0) {
-      fraction = Math.min(1, (+new Date() - this.start) / (this.duration || 1));
+      fraction = Math.min(1, (MathBox.Animator.now - this.start) / (this.duration || 1));
     }
     else {
       fraction = 1;

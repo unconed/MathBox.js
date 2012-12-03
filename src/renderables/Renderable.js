@@ -78,11 +78,6 @@ MathBox.Renderable.prototype = {
 
       // Set visibility
       this.object.visible = this.visible && (style.opacity > 0);
-
-      // Set double sided / culling order.
-      options = this.get();
-      this.object.doubleSided = options.doubleSided;
-      this.object.flipSided = options.flipSided;
     }
 
     if (this.material) {
@@ -103,6 +98,11 @@ MathBox.Renderable.prototype = {
       if (options) {
         this.material.applyAttributes(options);
       }
+
+      // Set double sided / culling order.
+      options = this.get();
+      this.material.side = options.doubleSided ? THREE.DoubleSide :
+                           options.flipSided ? THREE.BackSide : THREE.FrontSide;
     }
   },
 

@@ -194,6 +194,11 @@
         mathbox.animate('#c', {
           offset: [-3, -2, 0],
         }, { duration: 1500 });
+
+        mathbox.vector({
+          n: 2,
+          data: [[0, 0, 0], [1, 1, 1], [-1, -1, -1], [0, 1, .5]],
+        });
       }, 6000);
 
       document.getElementById('info').style.opacity = '0';

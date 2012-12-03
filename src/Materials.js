@@ -65,20 +65,22 @@ MathBox.Materials.prototype = {
       .snippet(position);
 
     // Apply math transform
-    if (options.shaded) {
-      // Transform position + DU/DV offset positions
-      factory
-        .group()
-          .snippet('mathTransform')
-        .next()
-          .snippet('mathTransform')
-        .next()
-          .snippet('mathTransform')
-        .combine();
-    }
-    else {
-      // Transform just position
-      factory.snippet('mathTransform');
+    if (!options.absolute) {
+      if (options.shaded) {
+        // Transform position + DU/DV offset positions
+        factory
+          .group()
+            .snippet('mathTransform')
+          .next()
+            .snippet('mathTransform')
+          .next()
+            .snippet('mathTransform')
+          .combine();
+      }
+      else {
+        // Transform just position
+        factory.snippet('mathTransform');
+      }
     }
 
     return factory;

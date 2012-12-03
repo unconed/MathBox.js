@@ -81,14 +81,14 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
           y = vector.y * aspect + focus;
 
       var radius = Math.sqrt(x*x + y*y);
-          theta = Math.atan2(y, x);
+          theta = Math.atan2(x, y);
 
       vector.x = theta / alpha;
       vector.y = (radius - focus) / aspect;
     }
 
     // Inverse polar power and fold
-    vector.x /= options.fold;
+    vector.x /= fold;
     vector.y = Math.sign(vector.y) * Math.pow(Math.abs(vector.y), 1 / power);
   },
 
@@ -103,7 +103,7 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
     // Correct Y extents during polar warp.
     if (axis == 1 && (alpha > 0)) {
       max = Math.max(Math.abs(max), Math.abs(min));
-      min = Math.max(-focus / aspect, min);
+      min = Math.max(-focus / aspect + .001, min);
     }
     return [min, max];
   },

@@ -46,6 +46,8 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     // Calculate arrow in world space
     var from = this._from.copy(this.from);
     var to = this._to.copy(this.to);
+    this.mathTransform.multiplyVector3(from);
+    this.mathTransform.multiplyVector3(to);
     viewport.to(from);
     viewport.to(to);
 
@@ -68,10 +70,10 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     this.normal.normalize();
 
     // Prepare binormal
-    var bi = this.bi.cross(this.diff, this.normal);
+    var bi = this.bi.cross(this.normal, this.diff);
 
     // Renormalize axes.
-    var normal = this.normal.cross(this.diff, this.bi);
+    var normal = this.normal.cross(this.bi, this.diff);
 
     // Prepare object matrix to place arrowhead
     var size = options.size;

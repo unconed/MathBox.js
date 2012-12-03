@@ -30,6 +30,7 @@ MathBox.Style.prototype = {
 
   validateColor: function (c) {
     if (c.constructor == Array) {
+      c = c.concat([0, 0, 0]);
       var color = new THREE.Color();
       return color.setRGB.apply(color, c);
     }
@@ -44,6 +45,7 @@ MathBox.Style.prototype = {
 
   validateMathScale: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([1, 1, 1]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -55,6 +57,7 @@ MathBox.Style.prototype = {
 
   validateMathRotation: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -66,6 +69,7 @@ MathBox.Style.prototype = {
 
   validateMathPosition: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -77,6 +81,7 @@ MathBox.Style.prototype = {
 
   validateWorldScale: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([1, 1, 1]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -88,6 +93,7 @@ MathBox.Style.prototype = {
 
   validateWorldRotation: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -99,6 +105,7 @@ MathBox.Style.prototype = {
 
   validateWorldPosition: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
