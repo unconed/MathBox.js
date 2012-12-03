@@ -347,7 +347,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     if (auto || force || (animate && (animate.delay || animate.duration))) {
       animate = _.extend({ duration: auto || 300 }, animate || {});
     }
-    if (animate.delay || animate.duration) {
+    if (animate && (animate.delay || animate.duration)) {
       return animate;
     }
   },
