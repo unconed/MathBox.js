@@ -67,10 +67,11 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     var viewport = this._viewport,
         camera = this._world.tCamera(),
         width = this.width,
-        height = this.height;
+        height = this.height,
+        speed = this._speed;
 
     // Apply running animations.
-    this.animator.update();
+    this.animator.update(speed);
 
     // Update viewport transform.
     viewport.update(this);
@@ -370,8 +371,6 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       animate = _.extend({ delay: 0, duration: auto || 300 }, animate || {});
     }
     if (animate && (animate.delay || animate.duration)) {
-      animate.delay    /= speed;
-      animate.duration /= speed;
       return animate;
     }
   },
