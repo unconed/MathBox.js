@@ -10,7 +10,7 @@ GLVENDOR="
 vendor/ThreeBox.js/vendor/microevent.js
 vendor/ThreeBox.js/vendor/microajax.js
 vendor/ThreeBox.js/build/ThreeBox-core.js
-vendor/ThreeRTT.js/build/ThreeRTT-core.js
+vendor/ThreeRTT.js/build/ThreeRTT-core-tquery.js
 vendor/ShaderGraph.js/build/ShaderGraph-core.js
 "
 
@@ -48,6 +48,11 @@ src/viewports/ViewportPolar.js
 src/viewports/ViewportSphere.js
 "
 
+SHADERS="
+shaders/snippets.glsl.html
+vendor/ThreeRTT.js/build/ThreeRTT.glsl.html
+"
+
 pushd vendor/ShaderGraph.js
 ./build.sh
 popd
@@ -63,6 +68,7 @@ popd
 cat $VENDOR $GLVENDOR $SRC > build/MathBox-bundle.js
 cat $GLVENDOR $SRC > build/MathBox.js
 cat $SRC > build/MathBox-core.js
+cat $SHADERS > build/MathBox.glsl.html
 
 if [ -z "$SKIP_MINIFY" ]; then
 curl --data-urlencode "js_code@build/MathBox.js" 	\

@@ -377,3 +377,68 @@ void fragmentTexture() {
 }
 </script>
 
+<!-- generic vertex/fragment shaders -->
+<script type="application/x-glsl" id="generic-vertex">
+varying vec2 vUV;
+
+void main() {
+  vUV = uv;
+
+  gl_Position = projectionMatrix *
+                modelViewMatrix *
+                vec4(position, 1.0);
+}
+</script>
+
+
+<script type="application/x-glsl" id="generic-vertex-screen">
+varying vec2 vUV;
+
+void main() {
+  // Flip Y to pass culling test in clip space.
+  vec2 uvFlip = vec2(uv.x, 1.0 - uv.y);
+
+  // Convert UV to absolute XY.
+  vec2 xy = uvFlip * 2.0 - 1.0;
+
+  vUV = uvFlip;
+  // Draw at end of clip space to allow occlusion.
+  gl_Position = vec4(xy, 1.0, 1.0);
+}
+</script>
+
+<script type="application/x-glsl" id="generic-fragment">
+void main() {
+  gl_FragColor = vec4(.5, .5, .5, 1);
+}
+</script>
+
+<script type="application/x-glsl" id="generic-fragment-texture">
+uniform sampler2D texture;
+varying vec2 vUV;
+
+void main() {
+  gl_FragColor = texture2D(texture, vUV);
+}
+</script>
+
+<!-- downsample shader -->
+<script type="application/x-glsl" id="rtt-vertex-downsample">
+uniform vec2 sampleAlignment;
+
+varying vec2 vUV;
+
+void main() {
+  // Flip Y to pass culling test in clip space.
+  vec2 uvFlip = vec2(uv.x, 1.0 - uv.y);
+
+  // Convert UV to absolute XY.
+  vec2 xy = uvFlip * 2.0 - 1.0;
+
+  // Correct to where samples are bilinearly interpolated in case of odd downsample.
+  vUV = uvFlip.xy * sampleAlignment.xy;
+
+  // Draw at end of clip space to allow other objects to occlude.
+  gl_Position = vec4(xy, 1.0, 1.0);
+}
+</script>

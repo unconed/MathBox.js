@@ -12,6 +12,14 @@ MathBox.Vector = function (options) {
   this.vertices = null;
   this.points = null;
   this.line = null;
+
+  this.on('change', function (changed) {
+    if (changed.size !== undefined) {
+      _.each(this.arrows, function (arrow) {
+        arrow.set('size', changed.size);
+      });
+    }
+  });
 };
 
 MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {

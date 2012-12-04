@@ -100,7 +100,11 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
         domain = options.domain,
         style = options.style,
         n = options.n,
-        shaded = options.shaded;
+        shaded = options.shaded,
+        flipSided = options.flipSided;
+
+    var iu = flipSided ? 1 : 0,
+        iv = flipSided ? 0 : 1;
 
     if (typeof n == 'number') {
       n = [n, n];
@@ -188,12 +192,12 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       });
 
       this.line.set('attributes', {
-        positionDU: tangents[0],
-        positionDV: tangents[1],
+        positionDU: tangents[iu],
+        positionDV: tangents[iv],
       });
       this.mesh.set('attributes', {
-        positionDU: tangents[0],
-        positionDV: tangents[1],
+        positionDU: tangents[iu],
+        positionDV: tangents[iv],
       });
     }
 

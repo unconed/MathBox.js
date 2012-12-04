@@ -1231,6 +1231,338 @@ ThreeRTT.RaytraceMaterial = function (renderTarget, fragmentShader, textures, un
     fragmentShader: ThreeRTT.getShader(fragmentShader)//,
   });
 };/**
+ * Handle a world for rendering to texture (tQuery).
+ *
+ * @param world (object) World to sync rendering to.
+ */
+ThreeRTT.World  = function (world, options) {
+  // Handle parameters.
+  options = options || {};
+  options = _.extend({
+    autoRendering: true,
+    autoSize:      !(options.width && options.height), // Default to autosize if no size specified
+    order:         ++ThreeRTT.World.sequence,
+    scale:         1//,
+  }, options);
+
+  // Inherit size from world
+  options.width  = (!options.autoSize && options.width)
+                   || ((world._opts && world._opts.renderW || 256) / options.scale);
+  options.height = (!options.autoSize && options.height)
+                   || ((world._opts && world._opts.renderH || 256) / options.scale);
+
+  // Bind to world resize event for ThreeBox.js auto-resize.
+  world.on('resize', function (width, height) {
+    if (!options.autoSize) return;
+
+    width /= options.scale;
+    height /= options.scale;
+
+    // Resize render target
+    this.size(width, height);
+  }.bind(this));
+
+  // Remember creation state.
+  this._options = options;
+  this._world   = world;
+  this._autoRendering  = options.autoRendering;
+
+  // Copy renderer.
+  this._renderer = world.tRenderer();
+
+  // Create an RTT stage, pass-thru options.
+  this._stage = new ThreeRTT.Stage(this._renderer, options);
+
+  // Expose scene and camera
+  this._scene  = this._stage.scene;
+  this._camera = this._stage.camera;
+
+  // Add to RTT queue at specified order.
+  this.queue = ThreeRTT.RenderQueue.bind(world);
+  this.queue.add(this);
+
+  // Update sizing state
+  this.size(options.width, options.height, true);
+};
+
+// All non-ordered passes go last, in order of addition.
+ThreeRTT.World.sequence = 100000;
+
+ThreeRTT.World.prototype = _.extend(new THREE.Object3D(), tQuery.World.prototype, {
+
+  // Return the stage object.
+  stage: function () {
+    return this._stage;
+  },
+
+  // Return the virtual render target object.
+  target: function () {
+    return this._stage.target;
+  },
+
+  // Change the autosize behavior.
+  autoSize: function (autoSize) {
+    if (autoSize !== undefined) {
+      this._options.autoSize = autoSize;
+    }
+    return this._options.autoSize;
+  },
+
+  // Change the autoscale factor
+  scale: function (scale) {
+    if (scale) {
+      this._options.scale = scale;
+
+      if (this._options.autoSize) {
+        // Resize immediately based off parent scale.
+        var opts = this._world._opts,
+            width = opts.renderW / scale,
+            height = opts.renderH / scale;
+
+        this.size(width, height);
+      }
+
+      return this;
+    }
+
+    return this._options.scale;
+  },
+
+  // Resize the RTT texture.
+  size: function (width, height, ignore) {
+    if (width && height) {
+      this._options.width = width;
+      this._options.height = height;
+
+      // Compatibility with tQuery world
+      this._opts = {
+        renderW: width,
+        renderH: height//,
+      };
+
+      // Ignore on init.
+      ignore || this._stage.size(width, height);
+      return this;
+    }
+
+    return { width: this._options.width, height: this._options.height };
+  },
+
+  // Set/remove the default full-screen quad surface material
+  material: function (material) {
+    this._stage.material(material);
+    return this;
+  },
+
+  // Return the virtual texture for reading from this RTT stage.
+  read: function (n) {
+    return this._stage.read(n);
+  },
+
+  // Return uniform for reading from this render target
+  uniform: function () {
+    return this._stage.uniform();
+  },
+
+  // Render this world.
+  render: function () {
+
+  	// Render the scene 
+  	if (this._autoRendering) {
+      // Render to write target.
+  	  this._stage.render();
+	  }
+
+    return this;
+  },
+
+  // Update this world manually.
+  update: function () {
+    // If not autorendering
+    if (!this._autoRendering) {
+      // Render to write target.
+  	  this._stage.render();
+    }
+  },
+
+  // Destroy/unlink this world.
+  destroy: function () {
+    // Remove stage.
+    this._stage.destroy();
+    this._stage = null;
+
+  	// Remove self from rendering queue.
+    this.queue.remove(this);
+
+  	// Microevent.js notification
+  	this.trigger('destroy');
+
+    return this;
+  }
+});
+
+// Make it pluginable.
+tQuery.pluginsInstanceOn(ThreeRTT.World);
+
+// Make it eventable.
+tQuery.MicroeventMixin(ThreeRTT.World.prototype)
+/**
+ * Priority queue for render-to-texture stages (tQuery).
+ *
+ * Attach a weighted queue to the given world, rendered before the world itself.
+ */
+ThreeRTT.RenderQueue = function (world) {
+  this.world = world;
+  this.queue = [];
+  this.callback = null;
+
+  this.renderer = world.tRenderer();
+};
+
+ThreeRTT.RenderQueue.prototype = {
+  // Add render stage to queue
+  add: function (stage) {
+    this.queue.push(stage);
+    this.sort();
+    this.init();
+  },
+
+  // Remove render stage from queue.
+  remove: function (stage) {
+    this.queue.splice(this.queue.indexOf(stage), 1);
+    this.cleanup();
+  },
+
+  // Ensure we are hooked into the world's rendering pipeline.
+  init: function () {
+    var queue = this.queue,
+        world = this.world;
+
+    if (queue.length && !this.callback) {
+      world.loop().hookPreRender(this.callback = function () {
+        _.each(queue, function (stage) {
+          stage.render();
+        });
+      });
+    }
+  },
+
+  // Unhook from world if no longer needed.
+  cleanup: function () {
+    var queue = this.queue,
+        world = this.world;
+
+    if (!queue.length && this.callback) {
+      world.loop().unhookPreRender(this.callback);
+      this.callback = null;
+    }
+  },
+
+  // Sort queue by given order.
+  sort: function () {
+    this.queue.sort(function (a, b) {
+      return a.order - b.order;
+    });
+  }
+};
+
+/**
+ * Helper to return the single RenderQueue associated with a world.
+ */
+ThreeRTT.RenderQueue.bind = function (world) {
+  var key = '__rttRenderQueue';
+
+  // Singleton attached to world.
+  if (world[key]) {
+    return world[key];
+  }
+  return (world[key] = new ThreeRTT.RenderQueue(world));
+}
+/**
+ * Create a render-to-texture world for this world.
+ */
+tQuery.World.registerInstance('rtt', function (options) {
+  return tQuery.createRTT(this, options);
+});
+
+/**
+ * Add a surface showing a render-to-texture surface to this world.
+ */
+tQuery.World.registerInstance('compose', function (rtts, fragmentShader, textures, uniforms) {
+  tQuery.composeRTT(this, rtts, fragmentShader, textures, uniforms);
+  return this;
+});
+
+/**
+ * Apply a fragment material to this RTT world.
+ */
+ThreeRTT.World.registerInstance('fragment', function (fragmentShader, textures, uniforms) {
+  this.material(tQuery.createFragmentMaterial(this, fragmentShader, textures, uniforms));
+  return this;
+});
+
+/**
+ * Apply a raytrace material to this RTT world.
+ */
+ThreeRTT.World.registerInstance('raytrace', function (fragmentShader, textures, uniforms) {
+  this.material(tQuery.createRaytraceMaterial(this, fragmentShader, textures, uniforms));
+  return this;
+});
+
+/**
+ * Apply a downsample material to this RTT world, sampling from the given world.
+ */
+ThreeRTT.World.registerInstance('downsample', function (worldFrom) {
+  // Force this world to right scale (will autosize)
+  var scale = worldFrom.scale();
+  this.scale(scale * 2);
+
+  // Force this world to right size now if not autosizing
+  if (!worldFrom.autoSize) {
+    var size = worldFrom.size();
+    this.size(size.width / 2, size.height / 2);
+  }
+
+  this.material(tQuery.createDownsampleMaterial(worldFrom, this));
+  return this;
+});
+
+/**
+ * Create a render-to-texture world (static).
+ */
+tQuery.registerStatic('createRTT', function (world, options) {
+  // Create new RTT world.
+  return new ThreeRTT.World(world, options);
+});
+
+/**
+ * Create a surface showing a render-to-texture image in this world.
+ */
+tQuery.registerStatic('composeRTT', function (world, rtts, fragmentShader, textures, uniforms) {
+  return new ThreeRTT.Compose(world.tScene(), rtts, fragmentShader, textures, uniforms);
+});
+
+/**
+ * Create a FragmentMaterial.
+ */
+tQuery.registerStatic('createFragmentMaterial', function (worlds, fragmentShader, textures, uniforms) {
+  return new ThreeRTT.FragmentMaterial(worlds, fragmentShader, textures, uniforms);
+});
+
+/**
+ * Create a RaytraceMaterial.
+ */
+tQuery.registerStatic('createRaytraceMaterial', function (world, fragmentShader, textures, uniforms) {
+  return new ThreeRTT.RaytraceMaterial(world, fragmentShader, textures, uniforms);
+});
+
+/**
+ * Create a DownsampleMaterial.
+ */
+tQuery.registerStatic('createDownsampleMaterial', function (worldFrom, worldTo) {
+  return new ThreeRTT.DownsampleMaterial(worldFrom, worldTo);
+});
+/**
  * ShaderGraph.js. Assemble GLSL shaders on the fly.
  */
 
@@ -2500,6 +2832,8 @@ MathBox.Animator = function () {
   this.active = [];
 };
 
+MathBox.Animator.now = 0;
+
 MathBox.Animator.prototype = {
 
   /**
@@ -2659,6 +2993,8 @@ MathBox.Animator.prototype = {
    * Update all currently running animations.
    */
   update: function () {
+    MathBox.Animator.now = +new Date(); // Use synchronized clock
+
     _.each(this.active, function (object) {
       _.each(object.__queue, function update(queue, key) {
         // Write out animated attribute.
@@ -2693,13 +3029,13 @@ MathBox.Animator.Delay = function (object, key, duration) {
 MathBox.Animator.Delay.prototype = {
 
   init: function () {
-    this.start = +new Date();
+    this.start = MathBox.Animator.now;
   },
 
   apply: function () {
     if (!this.start) this.init();
     if (this.duration > 0) {
-      this.fraction = Math.min(1, (+new Date() - this.start) / this.duration);
+      this.fraction = Math.min(1, (MathBox.Animator.now - this.start) / this.duration);
     }
     else {
       this.fraction = 1;
@@ -2733,7 +3069,7 @@ MathBox.Animator.Animation = function (object, key, value, duration, callback, e
 MathBox.Animator.Animation.prototype = {
 
   init: function () {
-    this.start = +new Date();
+    this.start = MathBox.Animator.now;
     if (this.from === null) this.from = this.object.get(this.key);
     if (this.from === undefined) {
       this.from = 0;
@@ -2752,7 +3088,7 @@ MathBox.Animator.Animation.prototype = {
     // Calculate animation progress / fraction.
     var fraction;
     if (this.duration > 0) {
-      fraction = Math.min(1, (+new Date() - this.start) / (this.duration || 1));
+      fraction = Math.min(1, (MathBox.Animator.now - this.start) / (this.duration || 1));
     }
     else {
       fraction = 1;
@@ -3170,6 +3506,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     options = this.extractStyle(options);
     _.each(this.select(selector), function (primitive) {
       primitive.set(options);
+      if (options.style) {
+        primitive.style.set(options.style);
+      }
     });
   },
 
@@ -3214,7 +3553,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     if (auto || force || (animate && (animate.delay || animate.duration))) {
       animate = _.extend({ duration: auto || 300 }, animate || {});
     }
-    if (animate.delay || animate.duration) {
+    if (animate && (animate.delay || animate.duration)) {
       return animate;
     }
   },
@@ -3239,6 +3578,20 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     _.each(this.select(selector), function (primitive) {
       animator.animate(primitive, options, animate);
     });
+  },
+
+  /**
+   * Clone primitives and animate to new properties.
+   */
+  clone: function (selector, options, animate) {
+    _.each(this.select(selector), function (primitive) {
+      var original = this.get(primitive);
+      delete original.sequence;
+      original.id = (original.id || '') + '-clone';
+
+      var copy = this.spawn(primitive.type(), original, { duration: 0 });
+      this.animate(copy, options, animate);
+    }.bind(this));
   },
 
   /**
@@ -3433,20 +3786,22 @@ MathBox.Materials.prototype = {
       .snippet(position);
 
     // Apply math transform
-    if (options.shaded) {
-      // Transform position + DU/DV offset positions
-      factory
-        .group()
-          .snippet('mathTransform')
-        .next()
-          .snippet('mathTransform')
-        .next()
-          .snippet('mathTransform')
-        .combine();
-    }
-    else {
-      // Transform just position
-      factory.snippet('mathTransform');
+    if (!options.absolute) {
+      if (options.shaded) {
+        // Transform position + DU/DV offset positions
+        factory
+          .group()
+            .snippet('mathTransform')
+          .next()
+            .snippet('mathTransform')
+          .next()
+            .snippet('mathTransform')
+          .combine();
+      }
+      else {
+        // Transform just position
+        factory.snippet('mathTransform');
+      }
     }
 
     return factory;
@@ -3662,6 +4017,7 @@ MathBox.Director = function (stage, script) {
   this._stage = stage;
   this.script = script;
   this.rollback = {};
+  this.clocks = {};
 
   this.step = 0;
   this.lastCommand = 0;
@@ -3670,12 +4026,21 @@ MathBox.Director = function (stage, script) {
 MathBox.Director.prototype = {
 
   /**
+   * Get clock for slide
+   */
+  clock: function (step, reset) {
+    if (reset || !this.clocks[step]) this.clocks[step] = +new Date();
+    return (+new Date() - this.clocks[step]) * .001;
+  },
+
+  /**
    * Invert the given operation (which hasn't been applied yet).
    */
   invert: function (op) {
     var stage = this._stage;
 
-    var inverse = [];
+    var inverse = [],
+        targets;
 
     var verb = op[0],
         selector = op[1],
@@ -3685,10 +4050,16 @@ MathBox.Director.prototype = {
 
     switch (verb) {
       case 'add':
-        inverse.push([
-          'remove',
-          options.sequence || (MathBox.Primitive.sequence + 1),
-        ]);
+        targets = [0];
+        // Fall through
+      case 'clone':
+        targets = targets || stage.select(selector);
+        _.each(targets, function (target, i) {
+          inverse.push([
+            'remove',
+            options.sequence || (MathBox.Primitive.sequence + 1 + i),
+          ]);
+        })
         break;
 
       case 'remove':
@@ -3732,6 +4103,8 @@ MathBox.Director.prototype = {
           options = op[2] || {},
           animate = op[3] || {};
 
+      if (verb == 'remove') animate = options;
+
       if (rollback) {
         var inverse = this.invert(op);
         var args = [0, 0].concat(inverse);
@@ -3744,21 +4117,20 @@ MathBox.Director.prototype = {
           animate.delay = 0;
           animate.duration = Math.min(300, animate.duration);
         }
-        if (options) {
-          options = _.extend({}, options);
-          options.delay = 0;
-          options.duration = Math.min(300, options.duration);
-        }
       }
 
       switch (verb) {
+        case 'clone':
+          stage.clone(selector, options, animate);
+          break;
+
         case 'add':
           var primitive = stage.spawn(selector, options, animate);
           break;
 
         case 'remove':
           _.each(stage.select(selector), function (primitive) {
-            stage.remove(primitive, options);
+            stage.remove(primitive, animate);
           });
           break;
 
@@ -3766,7 +4138,7 @@ MathBox.Director.prototype = {
           var targets = stage.select(selector);
           var array = options.constructor == Array;
           _.each(targets, function (target, i) {
-            target.set(array ? options[i] : options);
+            stage.set(target, array ? options[i] : options);
           });
           break;
 
@@ -3799,6 +4171,26 @@ MathBox.Director.prototype = {
     this.forward();
 
     return this;
+  },
+
+  /**
+   * Is at the given step.
+   */
+  is: function (step) {
+    if (!this.script.length) return false;
+
+    while (step < 0) step += this.script.length + 1;
+    while (step >= this.script.length + 1) step -= this.script.length + 1;
+
+    return step == this.step
+  },
+
+  isFirst: function () {
+    return this.is(0);
+  },
+
+  isLast: function () {
+    return this.is(-1);
   },
 
   /**
@@ -3838,6 +4230,8 @@ MathBox.Director.prototype = {
 
     this.apply(step, rollback, instant || this.skipping());
     this.step++;
+
+    this.clock(this.step, true);
 
     this.emit('go', this.step, 1);
 
@@ -3910,6 +4304,7 @@ MathBox.Style.prototype = {
 
   validateColor: function (c) {
     if (c.constructor == Array) {
+      c = c.concat([0, 0, 0]);
       var color = new THREE.Color();
       return color.setRGB.apply(color, c);
     }
@@ -3924,6 +4319,7 @@ MathBox.Style.prototype = {
 
   validateMathScale: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([1, 1, 1]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -3935,6 +4331,7 @@ MathBox.Style.prototype = {
 
   validateMathRotation: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -3946,6 +4343,7 @@ MathBox.Style.prototype = {
 
   validateMathPosition: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -3957,6 +4355,7 @@ MathBox.Style.prototype = {
 
   validateWorldScale: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([1, 1, 1]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -3968,6 +4367,7 @@ MathBox.Style.prototype = {
 
   validateWorldRotation: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -3979,6 +4379,7 @@ MathBox.Style.prototype = {
 
   validateWorldPosition: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -4199,6 +4600,7 @@ MathBox.Sprite = function (element, tangent, distance) {
   this.width = 0;
   this.height = 0;
   this.visible = true;
+  this.content = '';
 
   element.style.position = 'absolute';
   element.style.left = 0;
@@ -4492,6 +4894,7 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       offset: [0, 0, 0],
       n: 2,
       labels: false,
+      distance: 15,
       ticks: 10,
       tickBase: 1,
       arrow: true,
@@ -4632,7 +5035,7 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     var meshOptions = { dynamic: true, type: 'line' };
     var arrowOptions = { dynamic: true, size: options.size, offset: .5 };
     var tickOptions = { dynamic: true, size: options.size * .2 };
-    var labelOptions = { dynamic: true };
+    var labelOptions = { dynamic: true, distance: options.distance };
 
     // Scale label callback
     var callback = function (i) {
@@ -4811,9 +5214,18 @@ MathBox.Vector = function (options) {
   MathBox.Primitive.call(this, options);
 
   this.render = [];
+  this.arrows = [];
   this.vertices = null;
   this.points = null;
   this.line = null;
+
+  this.on('change', function (changed) {
+    if (changed.size !== undefined) {
+      _.each(this.arrows, function (arrow) {
+        arrow.set('size', changed.size);
+      });
+    }
+  });
 };
 
 MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
@@ -4822,6 +5234,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     return {
       n: 1,
       data: null,
+      arrow: true,
       expression: function () { return 0; },
       live: true,
       style: {},
@@ -4841,6 +5254,9 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     var options = this.get();
     // Bug: Vector foreshortening requires live to be always-on
     (true || options.live) && this.calculate(viewport);
+    _.each(this.arrows, function (arrow) {
+      arrow.show(options.arrow);
+    });
   },
 
   make: function () {
@@ -4852,6 +5268,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     var vertices = this.vertices = [];
     var points = this.points = [];
     var render = this.render = [];
+    var arrows = this.arrows = [];
 
     var lineOptions = { dynamic: options.live, type: 'line', strip: false };
     var arrowOptions = { size: options.size };
@@ -4867,6 +5284,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
       var arrowhead = new MathBox.Renderable.ArrowHead(points[i++], points[i++], arrowOptions, style);
       render.push(arrowhead);
+      arrows.push(arrowhead);
     });
 
     this.line = new MathBox.Renderable.Mesh(vertices, lineOptions, style);
@@ -4882,22 +5300,14 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         points = this.points,
         options = this.get(),
         data = options.data,
+        arrow = options.arrow,
         style = options.style,
         n = options.n,
         size = options.size;
 
-    // Line segment foreshortening
-    var fv = new THREE.Vector3(1, 1, 1);
-    var diff = new THREE.Vector3();
-
     // Find necessary foreshortening factors so line does not stick out through the arrowhead.
-    if (viewport) {
-      var matrix = viewport.transform.elements;
-      var fx = size/2 / Math.abs(matrix[0]);
-      var fy = size/2 / Math.abs(matrix[5]);
-      var fz = size/2 / Math.abs(matrix[10]);
-      fv.set(fx, fy, fz);
-    }
+    var last = new THREE.Vector3(),
+        current = new THREE.Vector3();
 
     var j = 0, k = 0;
     _.loop(n * 2, function (i) {
@@ -4919,19 +5329,22 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
       // Shorten line segment to make room for arrow
       vertices[i].set.apply(vertices[i], p);
-      if (i % 2 == 1) {
-        // Find foreshortening factor in vector's direction.
-        diff.sub(vertices[i], vertices[i - 1]);
-        diff.x = Math.abs(diff.x);
-        diff.y = Math.abs(diff.y);
-        diff.z = Math.abs(diff.z);
-        var l = diff.lengthManhattan();
-        var f = 1 - diff.dot(fv) / l / diff.length();
+      if (viewport && arrow && (i % 2 == 1)) {
+        // Find vector's world-space length
+        current.copy(vertices[i]);
+        last.copy(vertices[i-1]);
+        viewport.to(current);
+        viewport.to(last);
+        current.subSelf(last);
+        var l = current.length();
 
-        // Scale vector.
-        diff.sub(vertices[i], vertices[i - 1]);
-        diff.multiplyScalar(f);
-        vertices[i].add(vertices[i - 1], diff);
+        // Foreshorten line
+        var f = l - size;
+        current.normalize().multiplyScalar(f).addSelf(last);
+
+        // Transform back
+        viewport.from(current);
+        vertices[i].copy(current);
       }
 
       // Start/end + vector indices
@@ -5047,7 +5460,11 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
         domain = options.domain,
         style = options.style,
         n = options.n,
-        shaded = options.shaded;
+        shaded = options.shaded,
+        flipSided = options.flipSided;
+
+    var iu = flipSided ? 1 : 0,
+        iv = flipSided ? 0 : 1;
 
     if (typeof n == 'number') {
       n = [n, n];
@@ -5135,12 +5552,12 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       });
 
       this.line.set('attributes', {
-        positionDU: tangents[0],
-        positionDV: tangents[1],
+        positionDU: tangents[iu],
+        positionDV: tangents[iv],
       });
       this.mesh.set('attributes', {
-        positionDU: tangents[0],
-        positionDV: tangents[1],
+        positionDU: tangents[iu],
+        positionDV: tangents[iv],
       });
     }
 
@@ -5399,14 +5816,17 @@ MathBox.Renderable.prototype = {
 
       // Set visibility
       this.object.visible = this.visible && (style.opacity > 0);
-
-      // Set double sided / culling order.
-      options = this.get();
-      this.object.doubleSided = options.doubleSided;
-      this.object.flipSided = options.flipSided;
     }
 
     if (this.material) {
+
+      // Set double sided / culling order.
+      options = this.get();
+      this.material.side = options.doubleSided ? THREE.DoubleSide :
+                           THREE.FrontSide;
+      options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };
+      this.material.applyUniforms(options);
+
       // Apply style uniforms
       this.material.applyUniforms(style);
 
@@ -5560,6 +5980,8 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     // Calculate arrow in world space
     var from = this._from.copy(this.from);
     var to = this._to.copy(this.to);
+    this.mathTransform.multiplyVector3(from);
+    this.mathTransform.multiplyVector3(to);
     viewport.to(from);
     viewport.to(to);
 
@@ -5582,10 +6004,10 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     this.normal.normalize();
 
     // Prepare binormal
-    var bi = this.bi.cross(this.diff, this.normal);
+    var bi = this.bi.cross(this.normal, this.diff);
 
     // Renormalize axes.
-    var normal = this.normal.cross(this.diff, this.bi);
+    var normal = this.normal.cross(this.bi, this.diff);
 
     // Prepare object matrix to place arrowhead
     var size = options.size;
@@ -5771,7 +6193,10 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         sprites = this.sprites,
         callback = this.callback,
         anchor = this._anchor,
-        distance = options.distance;
+        distance = options.distance,
+        style = this.style;
+
+    var mathjax = window.MathJax && MathJax.Hub;
 
     // Update labels
     _.each(sprites, function (sprite, i) {
@@ -5779,6 +6204,9 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
       sprite.position.copy(points[i]);
       viewport.to(sprite.position);
       sprite.distance = options.distance;
+
+      // Set opacity
+      sprite.element.style.opacity = style.get('opacity');
 
       // Set content
       var text = '';
@@ -5799,8 +6227,19 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
           }
         }
       }
-      if (sprite.element.children[0].innerHTML !== text) {
-        sprite.element.children[0].innerHTML = text;
+
+      if (sprite.content !== text) {
+        var inner = sprite.element.children[0];
+
+        sprite.content = text;
+
+        if (mathjax) {
+          inner.innerHTML = "\\(" + text + "\\)";
+          MathJax.Hub.queue.Push(["Typeset", MathJax.Hub, inner]);
+        }
+        else {
+          inner.innerHTML = text;
+        }
       }
     });
 
@@ -6088,14 +6527,14 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
           y = vector.y * aspect + focus;
 
       var radius = Math.sqrt(x*x + y*y);
-          theta = Math.atan2(y, x);
+          theta = Math.atan2(x, y);
 
       vector.x = theta / alpha;
       vector.y = (radius - focus) / aspect;
     }
 
     // Inverse polar power and fold
-    vector.x /= options.fold;
+    vector.x /= fold;
     vector.y = Math.sign(vector.y) * Math.pow(Math.abs(vector.y), 1 / power);
   },
 
@@ -6110,7 +6549,7 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
     // Correct Y extents during polar warp.
     if (axis == 1 && (alpha > 0)) {
       max = Math.max(Math.abs(max), Math.abs(min));
-      min = Math.max(-focus / aspect, min);
+      min = Math.max(-focus / aspect + .001, min);
     }
     return [min, max];
   },

@@ -81,6 +81,14 @@ MathBox.Renderable.prototype = {
     }
 
     if (this.material) {
+
+      // Set double sided / culling order.
+      options = this.get();
+      this.material.side = options.doubleSided ? THREE.DoubleSide :
+                           THREE.FrontSide;
+      options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };
+      this.material.applyUniforms(options);
+
       // Apply style uniforms
       this.material.applyUniforms(style);
 
@@ -98,11 +106,6 @@ MathBox.Renderable.prototype = {
       if (options) {
         this.material.applyAttributes(options);
       }
-
-      // Set double sided / culling order.
-      options = this.get();
-      this.material.side = options.doubleSided ? THREE.DoubleSide :
-                           options.flipSided ? THREE.BackSide : THREE.FrontSide;
     }
   },
 

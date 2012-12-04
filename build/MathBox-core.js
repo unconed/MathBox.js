@@ -113,6 +113,8 @@ MathBox.Animator = function () {
   this.active = [];
 };
 
+MathBox.Animator.now = 0;
+
 MathBox.Animator.prototype = {
 
   /**
@@ -272,6 +274,8 @@ MathBox.Animator.prototype = {
    * Update all currently running animations.
    */
   update: function () {
+    MathBox.Animator.now = +new Date(); // Use synchronized clock
+
     _.each(this.active, function (object) {
       _.each(object.__queue, function update(queue, key) {
         // Write out animated attribute.
@@ -306,13 +310,13 @@ MathBox.Animator.Delay = function (object, key, duration) {
 MathBox.Animator.Delay.prototype = {
 
   init: function () {
-    this.start = +new Date();
+    this.start = MathBox.Animator.now;
   },
 
   apply: function () {
     if (!this.start) this.init();
     if (this.duration > 0) {
-      this.fraction = Math.min(1, (+new Date() - this.start) / this.duration);
+      this.fraction = Math.min(1, (MathBox.Animator.now - this.start) / this.duration);
     }
     else {
       this.fraction = 1;
@@ -346,7 +350,7 @@ MathBox.Animator.Animation = function (object, key, value, duration, callback, e
 MathBox.Animator.Animation.prototype = {
 
   init: function () {
-    this.start = +new Date();
+    this.start = MathBox.Animator.now;
     if (this.from === null) this.from = this.object.get(this.key);
     if (this.from === undefined) {
       this.from = 0;
@@ -365,7 +369,7 @@ MathBox.Animator.Animation.prototype = {
     // Calculate animation progress / fraction.
     var fraction;
     if (this.duration > 0) {
-      fraction = Math.min(1, (+new Date() - this.start) / (this.duration || 1));
+      fraction = Math.min(1, (MathBox.Animator.now - this.start) / (this.duration || 1));
     }
     else {
       fraction = 1;
@@ -783,6 +787,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     options = this.extractStyle(options);
     _.each(this.select(selector), function (primitive) {
       primitive.set(options);
+      if (options.style) {
+        primitive.style.set(options.style);
+      }
     });
   },
 
@@ -827,7 +834,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     if (auto || force || (animate && (animate.delay || animate.duration))) {
       animate = _.extend({ duration: auto || 300 }, animate || {});
     }
-    if (animate.delay || animate.duration) {
+    if (animate && (animate.delay || animate.duration)) {
       return animate;
     }
   },
@@ -852,6 +859,20 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     _.each(this.select(selector), function (primitive) {
       animator.animate(primitive, options, animate);
     });
+  },
+
+  /**
+   * Clone primitives and animate to new properties.
+   */
+  clone: function (selector, options, animate) {
+    _.each(this.select(selector), function (primitive) {
+      var original = this.get(primitive);
+      delete original.sequence;
+      original.id = (original.id || '') + '-clone';
+
+      var copy = this.spawn(primitive.type(), original, { duration: 0 });
+      this.animate(copy, options, animate);
+    }.bind(this));
   },
 
   /**
@@ -1046,20 +1067,22 @@ MathBox.Materials.prototype = {
       .snippet(position);
 
     // Apply math transform
-    if (options.shaded) {
-      // Transform position + DU/DV offset positions
-      factory
-        .group()
-          .snippet('mathTransform')
-        .next()
-          .snippet('mathTransform')
-        .next()
-          .snippet('mathTransform')
-        .combine();
-    }
-    else {
-      // Transform just position
-      factory.snippet('mathTransform');
+    if (!options.absolute) {
+      if (options.shaded) {
+        // Transform position + DU/DV offset positions
+        factory
+          .group()
+            .snippet('mathTransform')
+          .next()
+            .snippet('mathTransform')
+          .next()
+            .snippet('mathTransform')
+          .combine();
+      }
+      else {
+        // Transform just position
+        factory.snippet('mathTransform');
+      }
     }
 
     return factory;
@@ -1275,6 +1298,7 @@ MathBox.Director = function (stage, script) {
   this._stage = stage;
   this.script = script;
   this.rollback = {};
+  this.clocks = {};
 
   this.step = 0;
   this.lastCommand = 0;
@@ -1283,12 +1307,21 @@ MathBox.Director = function (stage, script) {
 MathBox.Director.prototype = {
 
   /**
+   * Get clock for slide
+   */
+  clock: function (step, reset) {
+    if (reset || !this.clocks[step]) this.clocks[step] = +new Date();
+    return (+new Date() - this.clocks[step]) * .001;
+  },
+
+  /**
    * Invert the given operation (which hasn't been applied yet).
    */
   invert: function (op) {
     var stage = this._stage;
 
-    var inverse = [];
+    var inverse = [],
+        targets;
 
     var verb = op[0],
         selector = op[1],
@@ -1298,10 +1331,16 @@ MathBox.Director.prototype = {
 
     switch (verb) {
       case 'add':
-        inverse.push([
-          'remove',
-          options.sequence || (MathBox.Primitive.sequence + 1),
-        ]);
+        targets = [0];
+        // Fall through
+      case 'clone':
+        targets = targets || stage.select(selector);
+        _.each(targets, function (target, i) {
+          inverse.push([
+            'remove',
+            options.sequence || (MathBox.Primitive.sequence + 1 + i),
+          ]);
+        })
         break;
 
       case 'remove':
@@ -1345,6 +1384,8 @@ MathBox.Director.prototype = {
           options = op[2] || {},
           animate = op[3] || {};
 
+      if (verb == 'remove') animate = options;
+
       if (rollback) {
         var inverse = this.invert(op);
         var args = [0, 0].concat(inverse);
@@ -1357,21 +1398,20 @@ MathBox.Director.prototype = {
           animate.delay = 0;
           animate.duration = Math.min(300, animate.duration);
         }
-        if (options) {
-          options = _.extend({}, options);
-          options.delay = 0;
-          options.duration = Math.min(300, options.duration);
-        }
       }
 
       switch (verb) {
+        case 'clone':
+          stage.clone(selector, options, animate);
+          break;
+
         case 'add':
           var primitive = stage.spawn(selector, options, animate);
           break;
 
         case 'remove':
           _.each(stage.select(selector), function (primitive) {
-            stage.remove(primitive, options);
+            stage.remove(primitive, animate);
           });
           break;
 
@@ -1379,7 +1419,7 @@ MathBox.Director.prototype = {
           var targets = stage.select(selector);
           var array = options.constructor == Array;
           _.each(targets, function (target, i) {
-            target.set(array ? options[i] : options);
+            stage.set(target, array ? options[i] : options);
           });
           break;
 
@@ -1412,6 +1452,26 @@ MathBox.Director.prototype = {
     this.forward();
 
     return this;
+  },
+
+  /**
+   * Is at the given step.
+   */
+  is: function (step) {
+    if (!this.script.length) return false;
+
+    while (step < 0) step += this.script.length + 1;
+    while (step >= this.script.length + 1) step -= this.script.length + 1;
+
+    return step == this.step
+  },
+
+  isFirst: function () {
+    return this.is(0);
+  },
+
+  isLast: function () {
+    return this.is(-1);
   },
 
   /**
@@ -1451,6 +1511,8 @@ MathBox.Director.prototype = {
 
     this.apply(step, rollback, instant || this.skipping());
     this.step++;
+
+    this.clock(this.step, true);
 
     this.emit('go', this.step, 1);
 
@@ -1523,6 +1585,7 @@ MathBox.Style.prototype = {
 
   validateColor: function (c) {
     if (c.constructor == Array) {
+      c = c.concat([0, 0, 0]);
       var color = new THREE.Color();
       return color.setRGB.apply(color, c);
     }
@@ -1537,6 +1600,7 @@ MathBox.Style.prototype = {
 
   validateMathScale: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([1, 1, 1]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -1548,6 +1612,7 @@ MathBox.Style.prototype = {
 
   validateMathRotation: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -1559,6 +1624,7 @@ MathBox.Style.prototype = {
 
   validateMathPosition: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -1570,6 +1636,7 @@ MathBox.Style.prototype = {
 
   validateWorldScale: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([1, 1, 1]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -1581,6 +1648,7 @@ MathBox.Style.prototype = {
 
   validateWorldRotation: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -1592,6 +1660,7 @@ MathBox.Style.prototype = {
 
   validateWorldPosition: function (v) {
     if (v.constructor == Array) {
+      v = v.concat([0, 0, 0]);
       var vector = new THREE.Vector3();
       return vector.set.apply(vector, v);
     }
@@ -1812,6 +1881,7 @@ MathBox.Sprite = function (element, tangent, distance) {
   this.width = 0;
   this.height = 0;
   this.visible = true;
+  this.content = '';
 
   element.style.position = 'absolute';
   element.style.left = 0;
@@ -2105,6 +2175,7 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       offset: [0, 0, 0],
       n: 2,
       labels: false,
+      distance: 15,
       ticks: 10,
       tickBase: 1,
       arrow: true,
@@ -2245,7 +2316,7 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     var meshOptions = { dynamic: true, type: 'line' };
     var arrowOptions = { dynamic: true, size: options.size, offset: .5 };
     var tickOptions = { dynamic: true, size: options.size * .2 };
-    var labelOptions = { dynamic: true };
+    var labelOptions = { dynamic: true, distance: options.distance };
 
     // Scale label callback
     var callback = function (i) {
@@ -2424,9 +2495,18 @@ MathBox.Vector = function (options) {
   MathBox.Primitive.call(this, options);
 
   this.render = [];
+  this.arrows = [];
   this.vertices = null;
   this.points = null;
   this.line = null;
+
+  this.on('change', function (changed) {
+    if (changed.size !== undefined) {
+      _.each(this.arrows, function (arrow) {
+        arrow.set('size', changed.size);
+      });
+    }
+  });
 };
 
 MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
@@ -2435,6 +2515,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     return {
       n: 1,
       data: null,
+      arrow: true,
       expression: function () { return 0; },
       live: true,
       style: {},
@@ -2454,6 +2535,9 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     var options = this.get();
     // Bug: Vector foreshortening requires live to be always-on
     (true || options.live) && this.calculate(viewport);
+    _.each(this.arrows, function (arrow) {
+      arrow.show(options.arrow);
+    });
   },
 
   make: function () {
@@ -2465,6 +2549,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     var vertices = this.vertices = [];
     var points = this.points = [];
     var render = this.render = [];
+    var arrows = this.arrows = [];
 
     var lineOptions = { dynamic: options.live, type: 'line', strip: false };
     var arrowOptions = { size: options.size };
@@ -2480,6 +2565,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
       var arrowhead = new MathBox.Renderable.ArrowHead(points[i++], points[i++], arrowOptions, style);
       render.push(arrowhead);
+      arrows.push(arrowhead);
     });
 
     this.line = new MathBox.Renderable.Mesh(vertices, lineOptions, style);
@@ -2495,22 +2581,14 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         points = this.points,
         options = this.get(),
         data = options.data,
+        arrow = options.arrow,
         style = options.style,
         n = options.n,
         size = options.size;
 
-    // Line segment foreshortening
-    var fv = new THREE.Vector3(1, 1, 1);
-    var diff = new THREE.Vector3();
-
     // Find necessary foreshortening factors so line does not stick out through the arrowhead.
-    if (viewport) {
-      var matrix = viewport.transform.elements;
-      var fx = size/2 / Math.abs(matrix[0]);
-      var fy = size/2 / Math.abs(matrix[5]);
-      var fz = size/2 / Math.abs(matrix[10]);
-      fv.set(fx, fy, fz);
-    }
+    var last = new THREE.Vector3(),
+        current = new THREE.Vector3();
 
     var j = 0, k = 0;
     _.loop(n * 2, function (i) {
@@ -2532,19 +2610,22 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
       // Shorten line segment to make room for arrow
       vertices[i].set.apply(vertices[i], p);
-      if (i % 2 == 1) {
-        // Find foreshortening factor in vector's direction.
-        diff.sub(vertices[i], vertices[i - 1]);
-        diff.x = Math.abs(diff.x);
-        diff.y = Math.abs(diff.y);
-        diff.z = Math.abs(diff.z);
-        var l = diff.lengthManhattan();
-        var f = 1 - diff.dot(fv) / l / diff.length();
+      if (viewport && arrow && (i % 2 == 1)) {
+        // Find vector's world-space length
+        current.copy(vertices[i]);
+        last.copy(vertices[i-1]);
+        viewport.to(current);
+        viewport.to(last);
+        current.subSelf(last);
+        var l = current.length();
 
-        // Scale vector.
-        diff.sub(vertices[i], vertices[i - 1]);
-        diff.multiplyScalar(f);
-        vertices[i].add(vertices[i - 1], diff);
+        // Foreshorten line
+        var f = l - size;
+        current.normalize().multiplyScalar(f).addSelf(last);
+
+        // Transform back
+        viewport.from(current);
+        vertices[i].copy(current);
       }
 
       // Start/end + vector indices
@@ -2660,7 +2741,11 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
         domain = options.domain,
         style = options.style,
         n = options.n,
-        shaded = options.shaded;
+        shaded = options.shaded,
+        flipSided = options.flipSided;
+
+    var iu = flipSided ? 1 : 0,
+        iv = flipSided ? 0 : 1;
 
     if (typeof n == 'number') {
       n = [n, n];
@@ -2748,12 +2833,12 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       });
 
       this.line.set('attributes', {
-        positionDU: tangents[0],
-        positionDV: tangents[1],
+        positionDU: tangents[iu],
+        positionDV: tangents[iv],
       });
       this.mesh.set('attributes', {
-        positionDU: tangents[0],
-        positionDV: tangents[1],
+        positionDU: tangents[iu],
+        positionDV: tangents[iv],
       });
     }
 
@@ -3012,14 +3097,17 @@ MathBox.Renderable.prototype = {
 
       // Set visibility
       this.object.visible = this.visible && (style.opacity > 0);
-
-      // Set double sided / culling order.
-      options = this.get();
-      this.object.doubleSided = options.doubleSided;
-      this.object.flipSided = options.flipSided;
     }
 
     if (this.material) {
+
+      // Set double sided / culling order.
+      options = this.get();
+      this.material.side = options.doubleSided ? THREE.DoubleSide :
+                           THREE.FrontSide;
+      options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };
+      this.material.applyUniforms(options);
+
       // Apply style uniforms
       this.material.applyUniforms(style);
 
@@ -3173,6 +3261,8 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     // Calculate arrow in world space
     var from = this._from.copy(this.from);
     var to = this._to.copy(this.to);
+    this.mathTransform.multiplyVector3(from);
+    this.mathTransform.multiplyVector3(to);
     viewport.to(from);
     viewport.to(to);
 
@@ -3195,10 +3285,10 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     this.normal.normalize();
 
     // Prepare binormal
-    var bi = this.bi.cross(this.diff, this.normal);
+    var bi = this.bi.cross(this.normal, this.diff);
 
     // Renormalize axes.
-    var normal = this.normal.cross(this.diff, this.bi);
+    var normal = this.normal.cross(this.bi, this.diff);
 
     // Prepare object matrix to place arrowhead
     var size = options.size;
@@ -3384,7 +3474,10 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         sprites = this.sprites,
         callback = this.callback,
         anchor = this._anchor,
-        distance = options.distance;
+        distance = options.distance,
+        style = this.style;
+
+    var mathjax = window.MathJax && MathJax.Hub;
 
     // Update labels
     _.each(sprites, function (sprite, i) {
@@ -3392,6 +3485,9 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
       sprite.position.copy(points[i]);
       viewport.to(sprite.position);
       sprite.distance = options.distance;
+
+      // Set opacity
+      sprite.element.style.opacity = style.get('opacity');
 
       // Set content
       var text = '';
@@ -3412,8 +3508,19 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
           }
         }
       }
-      if (sprite.element.children[0].innerHTML !== text) {
-        sprite.element.children[0].innerHTML = text;
+
+      if (sprite.content !== text) {
+        var inner = sprite.element.children[0];
+
+        sprite.content = text;
+
+        if (mathjax) {
+          inner.innerHTML = "\\(" + text + "\\)";
+          MathJax.Hub.queue.Push(["Typeset", MathJax.Hub, inner]);
+        }
+        else {
+          inner.innerHTML = text;
+        }
       }
     });
 
@@ -3701,14 +3808,14 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
           y = vector.y * aspect + focus;
 
       var radius = Math.sqrt(x*x + y*y);
-          theta = Math.atan2(y, x);
+          theta = Math.atan2(x, y);
 
       vector.x = theta / alpha;
       vector.y = (radius - focus) / aspect;
     }
 
     // Inverse polar power and fold
-    vector.x /= options.fold;
+    vector.x /= fold;
     vector.y = Math.sign(vector.y) * Math.pow(Math.abs(vector.y), 1 / power);
   },
 
@@ -3723,7 +3830,7 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
     // Correct Y extents during polar warp.
     if (axis == 1 && (alpha > 0)) {
       max = Math.max(Math.abs(max), Math.abs(min));
-      min = Math.max(-focus / aspect, min);
+      min = Math.max(-focus / aspect + .001, min);
     }
     return [min, max];
   },
