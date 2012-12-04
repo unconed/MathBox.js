@@ -3230,7 +3230,8 @@ MathBox.Stage = function (options, world, overlay) {
 
   // Create attribute animator
   this.animator = new MathBox.Animator();
-  this.duration = 0;
+  this._transition = 0;
+  this._speed = 1;
 
   // Create animateable camera controls.
   if (world) {
@@ -3242,6 +3243,14 @@ MathBox.Stage = function (options, world, overlay) {
 
   // Create methods for available primitives.
   this.loadPrimitives();
+
+  // Set options
+  if (options.transition !== undefined) {
+    this.transition(options.transition);
+  }
+  if (options.speed !== undefined) {
+    this.speed(options.speed);
+  }
 };
 
 // Inherit from Object3D to trick tQuery.
@@ -3536,24 +3545,39 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
   /**
    * Set default transition duration
    */
-  transition: function (duration) {
-    if (duration !== undefined) {
-      this.duration = duration;
+  transition: function (transition) {
+    if (transition !== undefined) {
+      this._transition = transition;
       return this;
     }
-    return this.duration;
+    return this._transition;
+  },
+
+  /**
+   * Set speed multiplier
+   */
+  speed: function (speed) {
+    if (speed !== undefined) {
+      this._speed = speed;
+      return this;
+    }
+    return this._speed;
   },
 
   /**
    * Resolve animation options
    */
   animateOptions: function (animate, force) {
-    var auto = this.duration;
+    var auto = this._transition,
+        speed = this._speed;
+
     if (animate === true) animate = {};
     if (auto || force || (animate && (animate.delay || animate.duration))) {
-      animate = _.extend({ duration: auto || 300 }, animate || {});
+      animate = _.extend({ delay: 0, duration: auto || 300 }, animate || {});
     }
     if (animate && (animate.delay || animate.duration)) {
+      animate.delay    /= speed;
+      animate.duration /= speed;
       return animate;
     }
   },
@@ -3716,7 +3740,6 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       }
     }.bind(this));
   },
-
 });
 
 /**
