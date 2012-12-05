@@ -314,6 +314,8 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         primitive.style.set(options.style);
       }
     });
+
+    return this;
   },
 
   /**
@@ -395,6 +397,8 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     _.each(this.select(selector), function (primitive) {
       animator.animate(primitive, options, animate);
     });
+
+    return this;
   },
 
   /**
@@ -409,6 +413,8 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       var copy = this.spawn(primitive.type(), original, { duration: 0 });
       this.animate(copy, options, animate);
     }.bind(this));
+
+    return this;
   },
 
   /**
@@ -421,6 +427,8 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       animator.hurry(primitive, keys, limit);
       primitive.style && animator.hurry(primitive.style, keys, limit);
     });
+
+    return this;
   },
 
   /**
@@ -433,6 +441,8 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       animator.stop(primitive, keys);
       primitive.style && animator.stop(primitive.style, keys);
     });
+
+    return this;
   },
 
   /**
@@ -514,6 +524,8 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       this[selector](options, animate);
       return this.primitives[this.primitives.length - 1];
     }
+
+    return this;
   },
 
   /**
