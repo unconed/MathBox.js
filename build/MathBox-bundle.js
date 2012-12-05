@@ -41708,7 +41708,7 @@ MathBox.Animator = function () {
   this.active = [];
 };
 
-MathBox.Animator.now = 0;
+MathBox.Animator.now = 1;
 
 MathBox.Animator.prototype = {
 
@@ -41869,7 +41869,7 @@ MathBox.Animator.prototype = {
    * Update all currently running animations.
    */
   update: function (speed) {
-    MathBox.Animator.now += speed * 1000/60; // Use synchronized clock
+    MathBox.Animator.now += speed; // Use synchronized clock
 
     _.each(this.active, function (object) {
       _.each(object.__queue, function update(queue, key) {
@@ -42086,13 +42086,13 @@ MathBox.Animator.Animation.prototype = {
  * Has a mathematical viewport, contains mathematical primitives, can be added to a three.js scene.
  */
 MathBox.Stage = function (options, world, overlay) {
-  this.options = options || {};
+  this.options = options = options || {};
 
   this._world = world;
 
   // Prepare overlay
   this.overlay = overlay;
-  world.on('resize', function (width, height) {
+  world && world.on('resize', function (width, height) {
     this.overlay.size(width, height);
     this.width = width;
     this.height = height;
@@ -42153,7 +42153,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         speed = this._speed;
 
     // Apply running animations.
-    this.animator.update(speed);
+    this.animator.update(speed * 1000/60);
 
     // Update viewport transform.
     viewport.update(this);
@@ -42161,15 +42161,15 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Loop over all primitives.
     _.each(this.primitives, function (primitive) {
       // Adjust to viewport
-      primitive.adjust(viewport, camera, width, height);
+      primitive.adjust(viewport, camera, width, height, this);
 
       // Loop over renderables
       var renderables = primitive.renderables();
       _.each(renderables, function (renderable) {
         // Adjust visible renderables to viewport
-        renderable.object && renderable.adjust(viewport, camera, width, height);
-      });
-    });
+        renderable.object && renderable.adjust(viewport, camera, width, height, this);
+      }.bind(this));
+    }.bind(this));
 
     // Update sprite overlay
     this.overlay && this.overlay.update(camera);
@@ -45097,7 +45097,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
     //this.refresh();
   },
 
-  adjust: function (viewport, camera, width, height) {
+  adjust: function (viewport, camera, width, height, stage) {
     var options = this.get(),
         points = this.points,
         sprites = this.sprites,
@@ -45113,6 +45113,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
       // Transform anchor point
       sprite.position.copy(points[i]);
       viewport.to(sprite.position);
+      stage.matrix.multiplyVector3(sprite.position);
       sprite.distance = options.distance;
 
       // Set opacity
@@ -45486,9 +45487,11 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
     // Adjust viewport range for polar transform.
     // As the viewport goes polar, the X-range is interpolated to the Y-range instead,
     // creating a perfectly circular viewport.
-    var fdx = dx+(dy-dx)*alpha;
+    var idx = dx > 0 ? 1 : -1;
+    var ady = Math.abs(dy);
+    var fdx = dx+(ady*idx-dx)*alpha;
     var sdx = fdx/sx, sdy = dy/sy;
-    aspect = sdx/sdy;
+    aspect = Math.abs(sdx/sdy);
 
     // Forward transform
     var transform = [

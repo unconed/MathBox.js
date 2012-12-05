@@ -7,7 +7,7 @@ MathBox.Animator = function () {
   this.active = [];
 };
 
-MathBox.Animator.now = 0;
+MathBox.Animator.now = 1;
 
 MathBox.Animator.prototype = {
 
@@ -168,7 +168,7 @@ MathBox.Animator.prototype = {
    * Update all currently running animations.
    */
   update: function (speed) {
-    MathBox.Animator.now += speed * 1000/60; // Use synchronized clock
+    MathBox.Animator.now += speed; // Use synchronized clock
 
     _.each(this.active, function (object) {
       _.each(object.__queue, function update(queue, key) {

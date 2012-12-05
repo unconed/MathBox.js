@@ -4,13 +4,13 @@
  * Has a mathematical viewport, contains mathematical primitives, can be added to a three.js scene.
  */
 MathBox.Stage = function (options, world, overlay) {
-  this.options = options || {};
+  this.options = options = options || {};
 
   this._world = world;
 
   // Prepare overlay
   this.overlay = overlay;
-  world.on('resize', function (width, height) {
+  world && world.on('resize', function (width, height) {
     this.overlay.size(width, height);
     this.width = width;
     this.height = height;
@@ -71,7 +71,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         speed = this._speed;
 
     // Apply running animations.
-    this.animator.update(speed);
+    this.animator.update(speed * 1000/60);
 
     // Update viewport transform.
     viewport.update(this);
@@ -79,15 +79,15 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     // Loop over all primitives.
     _.each(this.primitives, function (primitive) {
       // Adjust to viewport
-      primitive.adjust(viewport, camera, width, height);
+      primitive.adjust(viewport, camera, width, height, this);
 
       // Loop over renderables
       var renderables = primitive.renderables();
       _.each(renderables, function (renderable) {
         // Adjust visible renderables to viewport
-        renderable.object && renderable.adjust(viewport, camera, width, height);
-      });
-    });
+        renderable.object && renderable.adjust(viewport, camera, width, height, this);
+      }.bind(this));
+    }.bind(this));
 
     // Update sprite overlay
     this.overlay && this.overlay.update(camera);

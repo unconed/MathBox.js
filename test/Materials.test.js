@@ -23,9 +23,5 @@ Test.Tests.Materials = function (assert, done) {
   assert(vertex.match(/\bgl_Position\s*=/), "gl_Position is assigned");
   assert(fragment.match(/\bgl_FragColor\s*=/), "gl_FragColor is assigned");
 
-  console.log(material.uniforms);
-  console.log(material.vertexShader);
-  console.log(material.fragmentShader);
-
   done();
 };

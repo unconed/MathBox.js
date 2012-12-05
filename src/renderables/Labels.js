@@ -65,7 +65,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
     //this.refresh();
   },
 
-  adjust: function (viewport, camera, width, height) {
+  adjust: function (viewport, camera, width, height, stage) {
     var options = this.get(),
         points = this.points,
         sprites = this.sprites,
@@ -81,6 +81,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
       // Transform anchor point
       sprite.position.copy(points[i]);
       viewport.to(sprite.position);
+      stage.matrix.multiplyVector3(sprite.position);
       sprite.distance = options.distance;
 
       // Set opacity
