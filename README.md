@@ -44,31 +44,6 @@ var mathbox = mathBox(element, {
 ```
 (which is equivalent to `tQuery.createWorld(options).mathBox(element, options)`).
 
-All arguments are optional. The following options are available for ThreeBox in addition to the normal tQuery world options:
-
-```
-{
-  // Whether to allow mouse control of the camera.
-  cameraControls: true, 
-  // Override the class to use for mouse controls.
-  controlClass: ThreeBox.OrbitControls,
-  // Whether to show the mouse cursor.
-  // When set to false, the cursor auto-hides after a short delay.
-  cursor: true,
-  // Whether to track resizing of the containing element.
-  elementResize: true,
-  // Enable fullscreen mode with 'f' (browser support is buggy)
-  fullscreen: true, 
-  // Render at scaled resolution, e.g. scale 2 is half the width/height.
-  // Fractional values allowed.
-  scale: 1, 
-  // Enable screenshot taking with 'p'
-  screenshot: true, 
-  // Show FPS stats in the corner
-  stats: true,
-}
-```
-
 Then you call methods on the `mathbox` object to set up your scene. For example:
 
 ```
@@ -139,6 +114,34 @@ mathbox
   points: true,
   lineWidth: 2,
 })
+```
+
+MathBox Setup
+----------
+
+All mathbox arguments are optional. The following options are available for setup in addition to the normal tQuery world options:
+
+```
+{
+  // Whether to allow mouse control of the camera.
+  cameraControls: true, 
+  // Override the class to use for mouse controls.
+  controlClass: ThreeBox.OrbitControls,
+  // Whether to show the mouse cursor.
+  // When set to false, the cursor auto-hides after a short delay.
+  cursor: true,
+  // Whether to track resizing of the containing element.
+  elementResize: true,
+  // Enable fullscreen mode with 'f' (browser support is buggy)
+  fullscreen: true, 
+  // Render at scaled resolution, e.g. scale 2 is half the width/height.
+  // Fractional values allowed.
+  scale: 1, 
+  // Enable screenshot taking with 'p'
+  screenshot: true, 
+  // Show FPS stats in the corner
+  stats: true,
+}
 ```
 
 Manipulation
