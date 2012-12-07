@@ -208,7 +208,7 @@ Regular linear XYZ.
 ```
 .viewport({
   type: 'cartesian',
-  range: [[-1, 1], [-1, 1], [-1, 1]], // Range in X, Y or Z
+  range: [[-1, 1], [-1, 1], [-1, 1]], // Range in X, Y, Z
   scale: [1, 1, 1],                   // Scale in X, Y, Z
   rotation: [0, 0, 0],                // Viewport rotation in Euler angles
   position: [0, 0, 0],                // Viewport position in XYZ
@@ -221,7 +221,7 @@ Polar coordinate grid in radians. X is angle, Y is radius, Z is ordinary depth.
 ```
 .viewport({
   type: 'polar',
-  range: [[-π, π], [-1, 1], [-1, 1]], // Range in X, Y or Z
+  range: [[-π, π], [-1, 1], [-1, 1]], // Range in X, Y, Z
   polar: 1,                           // Interpolate between cartesian (0) and polar (1)
   fold:  1,                           // Fold the angles by this amount
   power: 1,                           // Apply this power to the radius
@@ -237,7 +237,7 @@ Spherical coordinate grid in radians. X is longitude, Y is latitude, Z is radius
 ```
 .viewport({
   type: 'sphere',
-  range: [[-π, π], [-π/2, π/2], [-1, 1]], // Range in X, Y or Z
+  range: [[-π, π], [-π/2, π/2], [-1, 1]], // Range in X, Y, Z
   sphere: 1,                              // Interpolate between cartesian (0) and spherical (1)
   scale: [1, 1, 1],                       // Scale in X, Y, Z
   rotation: [0, 0, 0],                    // Viewport rotation in Euler angles
