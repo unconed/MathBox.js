@@ -19,60 +19,39 @@ Test.Tests.Animator = function (assert, done) {
 
   animator.update(0);
 
-  setTimeout(function () {
+  animator.update(125);
 
-    animator.update(125);
+  assert((object.get().foo > data.foo) && (object.get().foo < data2.foo), 'Foo is at an inbetween value');
+  assert((object.get().bar < data.bar) && (object.get().bar > data2.bar), 'Bar is at an inbetween value');
 
-    assert((object.get().foo > data.foo) && (object.get().foo < data2.foo), 'Foo is at an inbetween value');
-    assert((object.get().bar < data.bar) && (object.get().bar > data2.bar), 'Bar is at an inbetween value');
+  animator.update(125);
 
-  }, 125);
+  assert(object.get().foo == data2.foo, 'Foo finished animating');
+  assert(object.get().bar == data2.bar, 'Bar finished animating');
 
-  setTimeout(function () {
+  var data3 = { foo: 3 };
+  var data4 = { foo: -20 };
+  animator.animate(object, data3, options);
+  animator.animate(object, data4, options);
 
-    animator.update(125);
+  animator.update(0);
 
-    assert(object.get().foo == data2.foo, 'Foo finished animating');
-    assert(object.get().bar == data2.bar, 'Bar finished animating');
+  animator.update(125);
 
-    var data3 = { foo: 3 };
-    var data4 = { foo: -20 };
-    animator.animate(object, data3, options);
-    animator.animate(object, data4, options);
+  assert((object.get().foo < data2.foo) && (object.get().foo > data3.foo), 'Foo is at an inbetween value (queued animation 1)');
 
-    animator.update(0);
+  animator.update(125);
 
-    setTimeout(function () {
+  assert((object.get().foo - data3.foo) < .1, 'Foo is at the first target point');
 
-      animator.update(125);
+  animator.update(125);
 
-      assert((object.get().foo < data2.foo) && (object.get().foo > data3.foo), 'Foo is at an inbetween value (queued animation 1)');
-    }, 125);
+  assert((object.get().foo < data3.foo) && (object.get().foo > data4.foo), 'Foo is at an inbetween value (queued animation 2)');
 
-    setTimeout(function () {
+  animator.update(125);
 
-      animator.update(125);
+  assert(object.get().foo == data4.foo, 'Foo is at the second target point ');
 
-      assert((object.get().foo - data3.foo) < .1, 'Foo is at the first target point');
-    }, 250);
-
-    setTimeout(function () {
-
-      animator.update(125);
-
-      assert((object.get().foo < data3.foo) && (object.get().foo > data4.foo), 'Foo is at an inbetween value (queued animation 2)');
-    }, 375);
-
-    setTimeout(function () {
-
-      animator.update(125);
-
-      assert(object.get().foo == data4.foo, 'Foo is at the second target point ');
-
-      done();
-    }, 550);
-
-  }, 250);
-
+  done();
 
 };
