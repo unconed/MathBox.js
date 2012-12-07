@@ -149,13 +149,13 @@ All mathbox arguments are optional. The following options are available for setu
 Manipulation
 ------------
 
-By giving objects an ID, you can manipulate them, using CSS-like selectors, i.e. `#id`. IDs must not contain spaces or punctuation other than `-` and `_`. You can also select all objects of a certain type by class, e.g. `axis` or `grid`.
+By giving objects an ID, you can manipulate them, using CSS-like selectors, i.e. `#id`. IDs must not contain spaces or punctuation other than `-` and `_`. You can also select all objects of a certain type, e.g. `axis` or `grid`.
 
 ```
 // Get all properties of the X axis object.
 var properties = mathbox.get('#x-axis');
 
-// Make all axes
+// Make all axes red
 mathbox.set('axis', { color: 0xff0000 });
 
 // Make Z axis thicker (1000ms animation)
@@ -163,7 +163,14 @@ mathbox.animate('#z-axis', { lineWidth: 10 }, { duration: 1000 });
 
 // Clone the Z axis and move it to the side (500ms animation, 200ms delay)
 mathbox.clone('#z-axis', { id: 'copy', mathPosition: [0, 1, 0] }, { duration: 500, delay: 200 });
+
+You can inspect the scene by calling:
+
 ```
+var primitives = mathbox.select('*');
+```
+
+which returns an array of matching elements (`*`, `#id` or `type`).
 
 Styles
 ------
@@ -251,6 +258,21 @@ Spherical coordinate grid in radians. X is longitude, Y is latitude, Z is radius
 ```
 
 Note that for 2D viewports, you can just pass in 2 elements rather than 3 for each vector.
+
+Camera
+---------
+For 3D graphs, you'll often want to move the camera around. For simplicity, the camera is a simple orbiter that always looks at a particular point in space. It uses spherical coordinates (i.e. latitude/longitude) to position itself around the point of interest.
+
+By default the camera is positioned to face the X/Y plane at a distance of 3.5 units, which gives the default viewport a slight margin.
+
+```
+.camera{{
+  orbit: 3.5,        // Distance from the center
+  phi: τ/4,          // Longitude angle in XZ, in radians, relative to 0 degrees on the X axis
+  theta: 0,          // Latitude angle towards Y, in radians, relative to the XZ plane.
+  lookAt: [0, 0, 0], // Point of focus
+}};
+```
 
 Primitives
 ----------
