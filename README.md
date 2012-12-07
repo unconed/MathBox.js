@@ -23,7 +23,9 @@ DomReady.ready(function() {
   ThreeBox.preload([
     'MathBox.glsl.html',
   ], function () {
-    ...
+
+    // do stuff with mathbox here
+
   });
 });
 ```
