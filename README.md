@@ -28,12 +28,45 @@ DomReady.ready(function() {
 });
 ```
 
-MathBox uses the ThreeBox tQuery boilerplate. Create a MathBox as follows and call .start() to begin rendering. See [ThreeBox.js](https://github.com/unconed/ThreeBox.js) for a list of available options.
+MathBox uses the ThreeBox tQuery boilerplate. Create a MathBox as follows and call .start() to begin rendering.
 
 ```
 var mathbox = mathBox({
   ...
 }).start();
+
+// or
+
+var element = document.getElementById('my-element');
+var mathbox = mathBox(element, {
+  ...
+}).start();
+```
+(which is equivalent to `tQuery.createWorld(options).mathBox(element, options)`).
+
+All arguments are optional. The following options are available for ThreeBox in addition to the normal tQuery world options:
+
+```
+{
+  // Whether to allow mouse control of the camera.
+  cameraControls: true, 
+  // Override the class to use for mouse controls.
+  controlClass: ThreeBox.OrbitControls,
+  // Whether to show the mouse cursor.
+  // When set to false, the cursor auto-hides after a short delay.
+  cursor: true,
+  // Whether to track resizing of the containing element.
+  elementResize: true,
+  // Enable fullscreen mode with 'f' (browser support is buggy)
+  fullscreen: true, 
+  // Render at scaled resolution, e.g. scale 2 is half the width/height.
+  // Fractional values allowed.
+  scale: 1, 
+  // Enable screenshot taking with 'p'
+  screenshot: true, 
+  // Show FPS stats in the corner
+  stats: true,
+}
 ```
 
 Then you call methods on the `mathbox` object to set up your scene. For example:
