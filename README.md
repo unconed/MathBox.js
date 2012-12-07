@@ -202,8 +202,9 @@ Viewports
 
 Each mathbox scene has an associated viewport. This sets up a specific mathematical coordinate grid. The following viewports are available:
 
-*Cartesian*
+__Cartesian__  
 Regular linear XYZ.
+
 ```
 .viewport({
   type: 'cartesian',
@@ -214,8 +215,9 @@ Regular linear XYZ.
 })
 ```
 
-*Polar*
+__Polar__  
 Polar coordinate grid in radians. X is angle, Y is radius, Z is ordinary depth.
+
 ```
 .viewport({
   type: 'polar',
@@ -228,8 +230,9 @@ Polar coordinate grid in radians. X is angle, Y is radius, Z is ordinary depth.
   position: [0, 0, 0],                // Viewport position in XYZ
 })
 
-*Sphere*
+__Sphere__  
 Spherical coordinate grid in radians. X is longitude, Y is latitude, Z is radius.
+
 ```
 .viewport({
   type: 'sphere',
