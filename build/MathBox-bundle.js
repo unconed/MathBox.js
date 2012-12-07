@@ -42543,15 +42543,24 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
    */
   viewport: function (viewport) {
     if (viewport !== undefined) {
+      // If changing viewport type, renderables need to be re-instantiated
+      // to regenerate shaders.
       if (!this._viewport || (viewport.type && viewport.type != this.options.viewport.type)) {
-        // If changing viewport type, renderables need to be re-instantiated to regenerate shaders.
+        // Weave in existing properties
+        if (this._viewport) {
+          viewport = _.extend({}, this._viewport.get(), viewport);
+        }
+
+        // Make viewport
         this._viewport = MathBox.Viewport.make(viewport);
+
+        // Reinstantiate all primitives to renegerate shaders.
         var primitives = this.primitives.slice(),
             stage = this;
-        _.each(primitives, function () {
-          stage._remove(this);
-          stage._add(this);
-        })
+        _.each(primitives, function (primitive) {
+          stage._remove(primitive);
+          stage._add(primitive);
+        });
       }
       else {
         // Set properties directly

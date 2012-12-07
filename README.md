@@ -149,7 +149,7 @@ All mathbox arguments are optional. The following options are available for setu
 Manipulation
 ------------
 
-By giving objects an ID, you can manipulate them, using CSS-like selectors, i.e. `#id`. IDs must not contain spaces or punctuation other than `-` and `_`. You can also select all objects of a certain type, e.g. `axis` or `grid`.
+By giving objects an ID, you can manipulate them, using CSS-like selectors, i.e. `#id`. IDs must not contain spaces or punctuation other than `-` and `_`. You can also select all objects of a certain type, e.g. `axis`, `camera`, `grid` or `viewport`.
 
 ```
 // Get all properties of the X axis object.
