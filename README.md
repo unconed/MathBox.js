@@ -118,7 +118,7 @@ mathbox
 })
 ```
 
-MathBox Setup
+Setup
 ----------
 
 All mathbox arguments are optional. The following options are available for setup in addition to the normal tQuery world options:
