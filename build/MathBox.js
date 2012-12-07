@@ -3613,9 +3613,20 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
   clone: function (selector, options, animate) {
     _.each(this.select(selector), function (primitive) {
       var original = this.get(primitive);
-      delete original.sequence;
-      original.id = (original.id || '') + '-clone';
 
+      // Reset creation ID of clone
+      delete original.sequence;
+
+      // Change ID immediately
+      if (options.id !== undefined) {
+        original.id = options.id;
+        delete options.id;
+      }
+      else {
+        original.id = (original.id || '') + '-clone';
+      }
+
+      // Spawn clone and animate it to new properties
       var copy = this.spawn(primitive.type(), original, { duration: 0 });
       this.animate(copy, options, animate);
     }.bind(this));

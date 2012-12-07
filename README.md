@@ -121,17 +121,23 @@ mathbox
 })
 ```
 
-By giving objects an ID, you can manipulate them, using CSS-like selectors. IDs must not contain spaces or punctuation other than `-` and `_`.
+Manipulation
+------------
+
+By giving objects an ID, you can manipulate them, using CSS-like selectors, i.e. `#id`. IDs must not contain spaces or punctuation other than `-` and `_`. You can also select all objects of a certain type by class, e.g. `axis` or `grid`.
 
 ```
 // Get all properties of the X axis object.
 var properties = mathbox.get('#x-axis');
 
-// Make Y axis red
-mathbox.set('#y-axis', { color: 0xff0000 });
+// Make all axes
+mathbox.set('axis', { color: 0xff0000 });
 
 // Make Z axis thicker (1000ms animation)
 mathbox.animate('#z-axis', { lineWidth: 10 }, { duration: 1000 });
+
+// Clone the Z axis and move it to the side (500ms animation, 200ms delay)
+mathbox.clone('#z-axis', { id: 'copy', mathPosition: [0, 1, 0] }, { duration: 500, delay: 200 });
 ```
 
 Styles
