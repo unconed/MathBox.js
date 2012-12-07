@@ -163,6 +163,7 @@ mathbox.animate('#z-axis', { lineWidth: 10 }, { duration: 1000 });
 
 // Clone the Z axis and move it to the side (500ms animation, 200ms delay)
 mathbox.clone('#z-axis', { id: 'copy', mathPosition: [0, 1, 0] }, { duration: 500, delay: 200 });
+```
 
 You can inspect the scene by calling:
 
