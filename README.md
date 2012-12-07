@@ -229,6 +229,7 @@ Polar coordinate grid in radians. X is angle, Y is radius, Z is ordinary depth.
   rotation: [0, 0, 0],                // Viewport rotation in Euler angles
   position: [0, 0, 0],                // Viewport position in XYZ
 })
+```
 
 __Sphere__  
 Spherical coordinate grid in radians. X is longitude, Y is latitude, Z is radius.
