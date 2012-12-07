@@ -34,14 +34,14 @@ MathBox uses the ThreeBox tQuery boilerplate. Create a MathBox as follows and ca
 
 ```
 var mathbox = mathBox({
-  ...
+  // ...
 }).start();
 
 // or
 
 var element = document.getElementById('my-element');
 var mathbox = mathBox(element, {
-  ...
+  // ...
 }).start();
 ```
 (which is equivalent to `tQuery.createWorld(options).mathBox(element, options)`).
