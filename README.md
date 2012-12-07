@@ -76,7 +76,7 @@ mathbox
 // Cartesian viewport
 .viewport({
   type: 'cartesian',
-  range: [[-3, 3], [-2, 2]],
+  range: [[-3, 3], [-3, 3]],
   scale: [1, 1],
 })
 // Apply automatic 300ms fade in/out
@@ -118,6 +118,26 @@ mathbox
   axis: [0, 2],
   color: 0xc0c0c0,
   lineWidth: 1,
+})
+
+// Curve, explicit function
+.curve({
+  id: 'my-curve',
+  domain: [-3, 3],
+  expression: function (x) { return Math.cos(x); },
+  line: true,
+  points: true,
+  lineWidth: 2,
+})
+
+// Curve, parametric function
+.curve({
+  id: 'my-circle',
+  domain: [-3, 3],
+  expression: function (x) { return [Math.sin(x)*2, Math.cos(x)*2]; },
+  line: true,
+  points: true,
+  lineWidth: 2,
 })
 ```
 
