@@ -641,7 +641,7 @@ ThreeRTT.Stage = function (renderer, options) {
 
   // Prepare full-screen quad to help render every pixel once (baking textures).
   if (options.material) {
-    this.material(true, options.material);
+    this.material(options.material);
   }
 }
 
@@ -794,7 +794,7 @@ ThreeRTT.RenderTarget = function (renderer, options) {
     texture:       {},
     clear:         { color: false, depth: true, stencil: true },
     clearColor:    0xFFFFFF,
-    clearAlpha:    0,
+    clearAlpha:    1,
     history:       0,
     scene:         null,
     camera:        null,
@@ -815,6 +815,9 @@ ThreeRTT.RenderTarget = function (renderer, options) {
 
   // Set size and allocate render targets.
   this.size(options.width, options.height);
+
+  // Clear buffer
+  this.clear();
 },
 
 ThreeRTT.RenderTarget.prototype = {
@@ -955,8 +958,16 @@ ThreeRTT.RenderTarget.prototype = {
         clear   = options.clear,
         renderer = this.renderer;
 
+    // Read old clearing state
+    var color = renderer.getClearColor().clone();
+    var alpha = renderer.getClearAlpha();
+
+    // Apple new clearing color
     renderer.setClearColorHex(options.clearColor, options.clearAlpha);
     renderer.clearTarget(this.write(), clear.color, clear.stencil, clear.depth);
+
+    // Reset state
+    renderer.setClearColor(color, alpha);
   },
 
   // Render to render target using given renderer.
@@ -1022,7 +1033,6 @@ ThreeRTT.ScreenGeometry = function () {
  * Helper for making ShaderMaterials that read from textures and write out processed fragments.
  */
 ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, uniforms) {
-  textures = textures || {};
 
   // Autoname texture uniforms as texture1, texture2, ...
   function textureName(j) {
@@ -1038,7 +1048,7 @@ ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, u
     textures = object;
   }
   // Allow passing single texture/object
-  else if (textures.constructor != Object) {
+  else if (textures) {
     textures = { texture1: textures };
   }
 
@@ -1064,7 +1074,7 @@ ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, u
   _.each(textures, function (texture, key) {
     uniforms[key] = {
       type: 't',
-      texture: ThreeRTT.toTexture(texture)//,
+      value: ThreeRTT.toTexture(texture)//,
     };
   });
 
@@ -1075,20 +1085,8 @@ ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, u
     if (!uniforms[key]) {
       uniforms[key] = {
         type: 't',
-        texture: target.read()//,
+        value: target.read()//,
       };
-    }
-  });
-
-  // Assign texture indices to uniforms.
-  var i = 0;
-  _.each(uniforms, function (uniform, key) {
-    if (uniform.type == 't') {
-      return uniform.value = i++;
-    }
-    if (uniform.type == 'tv') {
-      uniform.value = i;
-      i += uniform.texture.length;
     }
   });
 
@@ -1097,10 +1095,9 @@ ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, u
     uniforms.texture = uniforms.texture1;
   }
 
-  console.log(fragmentShader, uniforms);
-
   // Update sampleStep uniform on render of source.
-  renderTargets[0].on('render', function () {
+  var callback;
+  renderTargets[0].on('render', callback = function () {
     var value = uniforms.sampleStep.value;
 
     value.x = 1 / (renderTargets[0].width - 1);
@@ -1113,9 +1110,10 @@ ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, u
     vertexShader:   ThreeRTT.getShader('generic-vertex-screen'),
     fragmentShader: ThreeRTT.getShader(fragmentShader || 'generic-fragment-texture')//,
   });
+  material.side = THREE.DoubleSide;
 
   // Disable depth buffer for RTT operations.
-  //material.depthTest = false;
+  //material.depthTest = true;
   //material.depthWrite = false;
   //material.transparent = true;
 
@@ -6522,7 +6520,8 @@ MathBox.ViewportPolar = function (options) {
     polarAspect: 1,
     polarPower:  1,
     polarFold:   1,
-    polarFocus:  1//,
+    polarFocus:  1,
+    polarHelix:  0,//,
   });
 };
 
@@ -6535,6 +6534,7 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
       polar: 1,
       fold:  1,
       power: 1,
+      helix: 0,
       scale: [1, 1, 1],
       rotation: [0, 0, 0],
       position: [0, 0, 0],
@@ -6546,7 +6546,8 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         focus = this._uniforms.polarFocus,
         alpha = this._uniforms.polarAlpha,
         fold = this._uniforms.polarFold,
-        power = this._uniforms.polarPower;
+        power = this._uniforms.polarPower,
+        helix = this._uniforms.polarHelix;
 
     // Polar power and fold
     vector.x *= fold;
@@ -6559,6 +6560,9 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
 
       vector.x = Math.sin(x) * radius;
       vector.y = (Math.cos(x) * radius - focus) / aspect;
+
+      // Separate folds of complex plane into helix
+      vector.z += vector.x * helix * alpha;
     }
 
     // Apply viewport
@@ -6570,7 +6574,8 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         focus = this._uniforms.polarFocus,
         alpha = this._uniforms.polarAlpha,
         fold = this._uniforms.polarFold,
-        power = this._uniforms.polarPower;
+        power = this._uniforms.polarPower,
+        helix = this._uniforms.polarHelix;
 
     // Apply inverse viewport
     this.inverse.multiplyVector3(vector);
@@ -6585,6 +6590,9 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
 
       vector.x = theta / alpha;
       vector.y = (radius - focus) / aspect;
+
+      // Merge separated folds of complex plane flat
+      vector.z -= vector.x * helix * alpha;
     }
 
     // Inverse polar power and fold
@@ -6615,6 +6623,7 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         alpha = options.polar,
         fold = options.fold,
         power = options.power,
+        helix = options.helix,
         aspect = 1;
 
     var x = r[0][0],
@@ -6661,6 +6670,7 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
     this._uniforms.polarFold = fold;
     this._uniforms.polarPower = power;
     this._uniforms.polarFocus = (alpha > 0) ? 1/alpha - 1 : 0;
+    this._uniforms.polarHelix = helix;
 
     MathBox.Viewport.prototype.update.call(this, stage);
   },

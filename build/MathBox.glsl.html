@@ -194,6 +194,7 @@ void worldTransform(in vec3 positionIn, out vec3 positionOut) {
 uniform float polarAlpha;
 uniform float polarFocus;
 uniform float polarAspect;
+uniform float polarHelix;
 
 void cartesianToPolar(in vec3 positionIn, out vec3 positionOut) {
   if (polarAlpha > 0.0001) {
@@ -202,7 +203,7 @@ void cartesianToPolar(in vec3 positionIn, out vec3 positionOut) {
     positionOut = vec3(
       sin(xy.x) * radius,
       (cos(xy.x) * radius - polarFocus) / polarAspect,
-      positionIn.z//,
+      positionIn.z + positionIn.x * polarHelix * polarAlpha//,
     );
   }
   else {
@@ -395,13 +396,12 @@ void main() {
 varying vec2 vUV;
 
 void main() {
-  // Flip Y to pass culling test in clip space.
-  vec2 uvFlip = vec2(uv.x, 1.0 - uv.y);
+  // Set UV for lookup
+  vUV = uv;
 
   // Convert UV to absolute XY.
-  vec2 xy = uvFlip * 2.0 - 1.0;
+  vec2 xy = uv * 2.0 - 1.0;
 
-  vUV = uvFlip;
   // Draw at end of clip space to allow occlusion.
   gl_Position = vec4(xy, 1.0, 1.0);
 }

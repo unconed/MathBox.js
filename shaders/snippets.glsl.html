@@ -194,6 +194,7 @@ void worldTransform(in vec3 positionIn, out vec3 positionOut) {
 uniform float polarAlpha;
 uniform float polarFocus;
 uniform float polarAspect;
+uniform float polarHelix;
 
 void cartesianToPolar(in vec3 positionIn, out vec3 positionOut) {
   if (polarAlpha > 0.0001) {
@@ -202,7 +203,7 @@ void cartesianToPolar(in vec3 positionIn, out vec3 positionOut) {
     positionOut = vec3(
       sin(xy.x) * radius,
       (cos(xy.x) * radius - polarFocus) / polarAspect,
-      positionIn.z//,
+      positionIn.z + positionIn.x * polarHelix * polarAlpha//,
     );
   }
   else {

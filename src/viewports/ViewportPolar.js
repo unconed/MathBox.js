@@ -21,7 +21,8 @@ MathBox.ViewportPolar = function (options) {
     polarAspect: 1,
     polarPower:  1,
     polarFold:   1,
-    polarFocus:  1//,
+    polarFocus:  1,
+    polarHelix:  0,//,
   });
 };
 
@@ -34,6 +35,7 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
       polar: 1,
       fold:  1,
       power: 1,
+      helix: 0,
       scale: [1, 1, 1],
       rotation: [0, 0, 0],
       position: [0, 0, 0],
@@ -45,7 +47,8 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         focus = this._uniforms.polarFocus,
         alpha = this._uniforms.polarAlpha,
         fold = this._uniforms.polarFold,
-        power = this._uniforms.polarPower;
+        power = this._uniforms.polarPower,
+        helix = this._uniforms.polarHelix;
 
     // Polar power and fold
     vector.x *= fold;
@@ -58,6 +61,9 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
 
       vector.x = Math.sin(x) * radius;
       vector.y = (Math.cos(x) * radius - focus) / aspect;
+
+      // Separate folds of complex plane into helix
+      vector.z += vector.x * helix * alpha;
     }
 
     // Apply viewport
@@ -69,7 +75,8 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         focus = this._uniforms.polarFocus,
         alpha = this._uniforms.polarAlpha,
         fold = this._uniforms.polarFold,
-        power = this._uniforms.polarPower;
+        power = this._uniforms.polarPower,
+        helix = this._uniforms.polarHelix;
 
     // Apply inverse viewport
     this.inverse.multiplyVector3(vector);
@@ -84,6 +91,9 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
 
       vector.x = theta / alpha;
       vector.y = (radius - focus) / aspect;
+
+      // Merge separated folds of complex plane flat
+      vector.z -= vector.x * helix * alpha;
     }
 
     // Inverse polar power and fold
@@ -114,6 +124,7 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         alpha = options.polar,
         fold = options.fold,
         power = options.power,
+        helix = options.helix,
         aspect = 1;
 
     var x = r[0][0],
@@ -160,6 +171,7 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
     this._uniforms.polarFold = fold;
     this._uniforms.polarPower = power;
     this._uniforms.polarFocus = (alpha > 0) ? 1/alpha - 1 : 0;
+    this._uniforms.polarHelix = helix;
 
     MathBox.Viewport.prototype.update.call(this, stage);
   },
