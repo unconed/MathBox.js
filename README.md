@@ -230,14 +230,16 @@ Regular linear XYZ.
 
 __Polar__  
 Polar coordinate grid in radians. X is angle, Y is radius, Z is ordinary depth.
+Also useful for visualizing complex operations in polar representation.
 
 ```
 .viewport({
   type: 'polar',
   range: [[-π, π], [-1, 1], [-1, 1]], // Range in X, Y, Z
   polar: 1,                           // Interpolate between cartesian (0) and polar (1)
-  fold:  1,                           // Fold the angles by this amount
+  fold:  1,                           // Fold the angles by this factor
   power: 1,                           // Apply this power to the radius
+  helix: 0,                           // Separate the complex plane into a helix by this amount
   scale: [1, 1, 1],                   // Scale in X, Y, Z
   rotation: [0, 0, 0],                // Viewport rotation in Euler angles
   position: [0, 0, 0],                // Viewport position in XYZ
