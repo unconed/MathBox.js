@@ -3841,11 +3841,12 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
       var radius = focus + vector.y * aspect,
           x = vector.x * alpha;
 
-      vector.x = Math.sin(x) * radius;
-      vector.y = (Math.cos(x) * radius - focus) / aspect;
-
       // Separate folds of complex plane into helix
       vector.z += vector.x * helix * alpha;
+
+      // Apply polar warp
+      vector.x = Math.sin(x) * radius;
+      vector.y = (Math.cos(x) * radius - focus) / aspect;
     }
 
     // Apply viewport
@@ -3868,6 +3869,7 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
       var x = vector.x,
           y = vector.y * aspect + focus;
 
+      // Undo polar warp
       var radius = Math.sqrt(x*x + y*y);
           theta = Math.atan2(x, y);
 
