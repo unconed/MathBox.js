@@ -435,6 +435,12 @@ MathBox.Animator.Animation.prototype = {
           return lerp(from, to);
 
         case 'object':
+          if (!from) {
+            return to;
+          }
+          if (!to) {
+            return from;
+          }
           if (to.constructor == Array) {
             out = [];
             _.loop(from.length, function (i) {
@@ -462,12 +468,6 @@ MathBox.Animator.Animation.prototype = {
             out.g = lerp(from.g, to.g);
             out.b = lerp(from.b, to.b);
             return out;
-          }
-          if (!from) {
-            return to;
-          }
-          if (!to) {
-            return from;
           }
           return (fraction > .5) ? to : from;
           //throw "Unimplemented value type in animator. "+(typeof to)+" ("+ to.constructor +")";
