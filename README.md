@@ -18,7 +18,7 @@ Usage
 
 MathBox requires its library of GLSL shaders to be included in the DOM. You can either paste in the included `MathBox.glsl.html`, or use the included ThreeBox preloader with your favorite onReady mechanism:
 
-```
+```javascript
 DomReady.ready(function() {
   ThreeBox.preload([
     'MathBox.glsl.html',
@@ -32,7 +32,7 @@ DomReady.ready(function() {
 
 MathBox uses the ThreeBox tQuery boilerplate. Create a MathBox as follows and call .start() to begin rendering.
 
-```
+```javascript
 var mathbox = mathBox({
   // ...
 }).start();
@@ -48,7 +48,7 @@ var mathbox = mathBox(element, {
 
 Then you call methods on the `mathbox` object to set up your scene. For example:
 
-```
+```javascript
 mathbox
 // Cartesian viewport
 .viewport({
@@ -123,7 +123,7 @@ Setup
 
 All mathbox arguments are optional. The following options are available for setup in addition to the normal tQuery world options:
 
-```
+```javascript
 {
   // Whether to allow mouse control of the camera.
   cameraControls: true, 
@@ -151,7 +151,7 @@ Manipulation
 
 By giving objects an ID, you can manipulate them, using CSS-like selectors, i.e. `#id`. IDs must not contain spaces or punctuation other than `-` and `_`. You can also select all objects of a certain type, e.g. `axis`, `camera`, `grid` or `viewport`.
 
-```
+```javascript
 // Get all properties of the X axis object.
 var properties = mathbox.get('#x-axis');
 
@@ -167,7 +167,7 @@ mathbox.clone('#z-axis', { id: 'copy', mathPosition: [0, 1, 0] }, { duration: 50
 
 You can inspect the scene by calling:
 
-```
+```javascript
 var primitives = mathbox.select('*');
 ```
 
@@ -178,7 +178,7 @@ Styles
 
 All MathBox primitives support the following styles, in addition to their specific properties:
 
-```
+```javascript
 {
 color: 0x123456, // Color in hex
 opacity: 1,      // Opacity
@@ -199,13 +199,13 @@ zIndex: 0.0, // Z bias which pushes the object forward (+) or backward (-)
 
 Styles are grouped under a separate `style` property for each primitive, e.g.
 
-```
+```javascript
 mathbox.get('#x-axis').style.color
 ```
 
 However, when using `mathbox.set()` and `mathbox.animate()`, you can omit the `style` key and pass in a flat object mixing both styles and options:
 
-```
+```javascript
 mathbox.set('#x-axis', { color: 0xff0000, arrow: false });
 mathbox.animate('#y-axis', { opacity: 0.5 });
 ```
@@ -218,7 +218,7 @@ Each mathbox scene has an associated viewport. This sets up a specific mathemati
 __Cartesian__  
 Regular linear XYZ.
 
-```
+```javascript
 .viewport({
   type: 'cartesian',
   range: [[-1, 1], [-1, 1], [-1, 1]], // Range in X, Y, Z
@@ -232,7 +232,7 @@ __Polar__
 Polar coordinate grid in radians. X is angle, Y is radius, Z is ordinary depth.
 Also useful for visualizing complex operations in polar representation.
 
-```
+```javascript
 .viewport({
   type: 'polar',
   range: [[-π, π], [-1, 1], [-1, 1]], // Range in X, Y, Z
@@ -249,7 +249,7 @@ Also useful for visualizing complex operations in polar representation.
 __Sphere__  
 Spherical coordinate grid in radians. X is longitude, Y is latitude, Z is radius.
 
-```
+```javascript
 .viewport({
   type: 'sphere',
   range: [[-π, π], [-π/2, π/2], [-1, 1]], // Range in X, Y, Z
@@ -268,7 +268,7 @@ For 3D graphs, you'll often want to move the camera around. For simplicity, the 
 
 By default the camera is positioned to face the X/Y plane at a distance of 3.5 units, which gives the default viewport a slight margin.
 
-```
+```javascript
 .camera{{
   orbit: 3.5,        // Distance from the center
   phi: τ/4,          // Longitude angle in XZ, in radians, relative to 0 degrees on the X axis
@@ -283,7 +283,7 @@ Primitives
 You can add the following items into the scene by invoking these methods:
 
 Axis
-```
+```javascript
 .axis({
   axis: 0,           // 0 = X, 1 = Y, 2 = Z
   offset: [0, 0, 0], // Shift axis position
@@ -296,7 +296,7 @@ Axis
 ```
 
 Bezier Curve
-```
+```javascript
 .bezier({
   n: 64,                         // Number of points
   domain: [0, 1],                // Domain, expressed in interpolation space
@@ -311,7 +311,7 @@ Bezier Curve
 ```
 
 Bezier Surface
-```
+```javascript
 .beziersurface({
   n: [ 64, 64 ],                       // Number of points in each direction
   domain: [[0, 1], [0, 1]],            // X/Y Domain in interpolation space
@@ -330,7 +330,7 @@ Bezier Surface
 ```
 
 Curve
-```
+```javascript
 .curve({
   n: 64,                         // Number of points
   domain: [0, 1],                // Input domain
@@ -344,7 +344,7 @@ Curve
 ```
 
 Grid
-```
+```javascript
 .grid({
   axis: [ 0, 1 ],         // Primary and secondary grid axis (0 = X, 1 = Y, 2 = Z)
   offset: [0, 0, 0],      // Shift grid position
@@ -356,7 +356,7 @@ Grid
 ```
 
 Surface
-```
+```javascript
 .surface({
   n: [ 64, 64 ],                         // Number of points in each direction
   domain: [[0, 1], [0, 1]],              // X/Y Input domain
@@ -374,7 +374,7 @@ Surface
 ```
 
 Vector
-```
+```javascript
 .vector({
   n: 1,                              // Number of vectors
   data: null,                        // Array of start and end points, each an array of 2 or 3 elements
