@@ -23,7 +23,6 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       doubleSided: true,
       flipSided: false,
       shaded: true,
-      map: null,
       style: {}//,
     };
   },
@@ -67,7 +66,6 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       flipSided: options.flipSided,
       shaded: options.shaded,
       dynamic: options.live,
-      map: options.map,
     }, style);
     this.line = new MathBox.Renderable.Mesh(geometry, {
       type: 'mesh',

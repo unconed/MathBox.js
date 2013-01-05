@@ -174,6 +174,11 @@ MathBox.Materials.prototype = {
     });
 
     if (type == 'uniforms') {
+      if (options.map !== undefined) {
+        if (material.uniforms.texture) {
+          material.uniforms.texture.value = options.map;
+        }
+      }
       if (options.lineWidth !== undefined) {
         material.wireframeLinewidth = material.linewidth = options.lineWidth;
       }

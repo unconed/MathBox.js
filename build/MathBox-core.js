@@ -1237,6 +1237,11 @@ MathBox.Materials.prototype = {
     });
 
     if (type == 'uniforms') {
+      if (options.map !== undefined) {
+        if (material.uniforms.texture) {
+          material.uniforms.texture.value = options.map;
+        }
+      }
       if (options.lineWidth !== undefined) {
         material.wireframeLinewidth = material.linewidth = options.lineWidth;
       }
@@ -1642,6 +1647,7 @@ MathBox.Style.prototype = {
       worldPosition: new THREE.Vector3(),
       zIndex: 0.0,
 
+      map: null,
       mapOpacity: 0,
     };
   },
@@ -2734,7 +2740,6 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       doubleSided: true,
       flipSided: false,
       shaded: true,
-      map: null,
       style: {}//,
     };
   },
@@ -2778,7 +2783,6 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       flipSided: options.flipSided,
       shaded: options.shaded,
       dynamic: options.live,
-      map: options.map,
     }, style);
     this.line = new MathBox.Renderable.Mesh(geometry, {
       type: 'mesh',
@@ -3174,11 +3178,6 @@ MathBox.Renderable.prototype = {
 
     if (this.material) {
       options = this.get();
-
-      // Apply texture
-      if (options.map) {
-        this.material.uniforms.texture.value = options.map;
-      }
 
       // Set double sided / culling order.
       this.material.side = options.doubleSided ? THREE.DoubleSide :

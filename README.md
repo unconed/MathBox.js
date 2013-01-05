@@ -185,6 +185,9 @@ opacity: 1,      // Opacity
 lineWidth: 2,    // Line width for curves and wireframes
 pointSize: 5,    // Point size for point rendering
 
+map: null,       // Texture Map (pass in THREE.Texture)
+mapOpacity: 0,   // Opacity of texture map
+
 mathScale: [1, 1, 1],    // Scale transform in math-space
 mathRotation: [0, 0, 0], // Euler-angle rotation in math-space
 mathPosition: [0, 0, 0], // Position shift in math-space
@@ -326,8 +329,6 @@ Bezier Surface
   doubleSided: true,                   // Whether the mesh is double sided
   flipSided: false,                    // Whether to flip a single sided mesh
   shaded: true,                        // Whether to shade the surface
-  map: null,                           // Texture Map (pass in THREE.Texture)
-  mapOpacity: 0,                       // Opacity of texture map
 })
 ```
 
@@ -372,8 +373,6 @@ Surface
   doubleSided: true,                     // Whether the mesh is double sided
   flipSided: false,                      // Whether to flip a single sided mesh
   shaded: true,                          // Whether to shade the surface
-  map: null,                             // Texture Map (pass in THREE.Texture)
-  mapOpacity: 0,                         // Opacity of texture map
 })
 ```
 
