@@ -20,6 +20,7 @@
   <script type="text/javascript" charset="utf-8">
     DomReady.ready(function () {
       if (location.href.match(/^file:/)) {
+        document.getElementById('info').style.opacity = 1;
         document.getElementById('info').innerHTML = "Sorry. This example does not work when accessed using file://. Please use an http:// host and try again.";
       }
     });
@@ -45,6 +46,8 @@
 
       border-radius: 3px;
       text-shadow: 0px 1px 0px rgba(0, 0, 0, .4);
+
+      opacity: 0;
     }
     
     #info kbd {
@@ -104,8 +107,6 @@
           n: [32, 64],
           expression: surfaceFunc,
         })
-
-      document.getElementById('info').style.opacity = '0';
 
       // Rotate camera continuously
       mathbox.world().loop().hookPreRender(function () {

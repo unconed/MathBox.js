@@ -42407,7 +42407,12 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         speed = this._speed;
 
     // Apply running animations.
-    this.animator.update(speed * 1000/60);
+    var now = +new Date();
+    if (!this.last) {
+      this.last = now - 1000/60;
+    }
+    this.animator.update(speed * (now - this.last));
+    this.last = now;
 
     // Update viewport transform.
     viewport.update(this);
