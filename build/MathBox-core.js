@@ -276,7 +276,8 @@ MathBox.Animator.prototype = {
   update: function (speed) {
     MathBox.Animator.now += speed; // Use synchronized clock
 
-    _.each(this.active, function (object) {
+    var active = this.active.slice();
+    _.each(active, function (object) {
       _.each(object.__queue, function update(queue, key) {
         // Write out animated attribute.
         var animation = queue[0];
@@ -463,7 +464,8 @@ MathBox.Animator.Animation.prototype = {
       }
     }
 
-    this.object.set(this.key, process(from, to), true);
+    var value = process(from, to);
+    this.object.set(this.key, value, true);
   },
 
   skip: function () {
@@ -2632,6 +2634,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
   calculate: function (viewport) {
     var vertices = this.vertices,
+        arrows = this.arrows,
         points = this.points,
         options = this.get(),
         data = options.data,
@@ -2673,13 +2676,19 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         current.subSelf(last);
         var l = current.length();
 
+        var clipped = Math.min(1, l * .5 / size);
+        clipped = (1 - (1 - clipped) * (1 - clipped)) * size;
+
         // Foreshorten line
-        var f = l - size;
+        var f = l - clipped;
         current.normalize().multiplyScalar(f).addSelf(last);
 
         // Transform back
         viewport.from(current);
         vertices[i].copy(current);
+
+        // Set arrowhead size
+        arrows[k].set({ size: clipped });
       }
 
       // Start/end + vector indices
@@ -3921,10 +3930,12 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         sy = s[1],
         sz = s[2];
 
+    // Watch for negative scales.
+    var idx = dx > 0 ? 1 : -1;
+
     // Adjust viewport range for polar transform.
     // As the viewport goes polar, the X-range is interpolated to the Y-range instead,
     // creating a perfectly circular viewport.
-    var idx = dx > 0 ? 1 : -1;
     var ady = Math.abs(dy);
     var fdx = dx+(ady*idx-dx)*alpha;
     var sdx = fdx/sx, sdy = dy/sy;
@@ -4108,11 +4119,16 @@ MathBox.ViewportSphere.prototype = _.extend(new MathBox.ViewportCartesian(null),
         sy = s[1],
         sz = s[2];
 
+    // Watch for negative scales.
+    var idx = dx > 0 ? 1 : -1;
+    var idy = dy > 0 ? 1 : -1;
+
     // Adjust viewport for sphere.
     // As the viewport goes spherical, the X/Y-ranges are interpolated to the Z-range,
     // creating a perfectly spherical viewport.
-    var fdx = dx+(dz-dx)*alpha;
-    var fdy = dy+(dz-dy)*alpha;
+    var adz = Math.abs(dz);
+    var fdx = dx+(adz*idx-dx)*alpha;
+    var fdy = dy+(adz*idy-dy)*alpha;
     var sdx = fdx/sx,
         sdy = fdy/sy,
         sdz = dz/sz;

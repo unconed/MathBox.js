@@ -39080,14 +39080,15 @@ tQuery.World.registerInstance('addThreeBox', function (element, options) {
   if (options.cameraControls) {
     var loop = this.loop(), render = this.render.bind(this);
 
-    ctx.cameraControls = ThreeBox.OrbitControls
-      .bind(tCamera, element, options)
-      .on('change', function () {
+    ctx.cameraControls = new options.controlClass(tCamera, element, options);
+    if (ctx.cameraControls.on) {
+      ctx.cameraControls.on('change', function () {
         // If not looping, ensure view is updated on interaction.
         if (!loop._timerId) {
           render();
         }
       });
+    }
     this.setCameraControls(ctx.cameraControls);
   }
 
@@ -39110,12 +39111,12 @@ tQuery.World.registerInstance('addThreeBox', function (element, options) {
   }
 
   // Allow 'p' to make screenshot.
-  if (options.screenshot) {
+  if (THREEx && THREEx.Screenshot && options.screenshot) {
     ctx.screenshot = THREEx.Screenshot.bindKey(tRenderer);
   }
 
   // Allow 'f' to go fullscreen where this feature is supported.
-  if (options.fullscreen && THREEx.FullScreen.available()) {
+  if (THREEx && THREEx.FullScreen && options.fullscreen && THREEx.FullScreen.available()) {
     ctx.fullscreen = THREEx.FullScreen.bindKey();
   }
 
@@ -39397,35 +39398,94 @@ ThreeBox.preload = function (files, callback) {
 
   // Completion counter
   var remaining = files.length;
+  var accumulate = {};
+  var ping = function (data) {
+    // Collect objects
+    _.extend(accumulate, data || {});
 
-  // Load individual file and add to DOM
-  _.each(files, function (file) {
-    // Load file and insert into DOM.
-    new microAjax(file, function (res) {
-      var match;
+    // Call callback if done.
+    if (--remaining == 0) {
+      callback(accumulate);
+    };
+  }
 
-      // Insert script tags directly
-      if (match = res.match(/^<script[^>]*type=['"]text\/javascript['"][^>]*>([\s\S]+?)<\/script>$/m)) {
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.innerHTML = match[1];
-        document.body.appendChild(script);
-      }
-      // Insert HTML via div
-      else {
-        var div = document.createElement('div');
-        div.innerHTML = res;
-        document.body.appendChild(div);
-      }
-
-      // Call callback if done.
-      if (--remaining == 0) {
-        callback();
+  // Prepare extensions
+  var l = ThreeBox.preload;
+  var regexps = {},
+      exts = {
+        'html': l.html,
+        'jpg': l.image,
+        'png': l.image,
+        'gif': l.image,
+        'mp3': l.audio,
       };
+  _.each(exts, function (handler, ext) {
+    regexps[ext] = new RegExp('\\.' + ext + '$');
+  });
+
+  // Load individual file
+  _.each(files, function (file) {
+    // Use appropriate handler based on extension
+    _.each(exts, function (handler, ext) {
+      if (file.match(regexps[ext])) {
+        var path = file.split(/\//g);
+        var name = path.pop().replace(/\.[A-Za-z0-9]+$/, '');
+
+        handler(file, name, ping);
+      }
     });
   });
 };
 
+ThreeBox.preload.html = function (file, name, callback) {
+  new microAjax(file, function (res) {
+    var match;
+
+    // Insert javascript directly
+    if (match = res.match(/^<script[^>]*type=['"]text\/javascript['"][^>]*>([\s\S]+?)<\/script>$/m)) {
+      var script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.innerHTML = match[1];
+      document.body.appendChild(script);
+    }
+    // Insert HTML via div
+    else {
+      var div = document.createElement('div');
+      div.innerHTML = res;
+      document.body.appendChild(div);
+    }
+
+    console.log('Loaded HTML ', file);
+    callback();
+  });
+};
+
+ThreeBox.preload.image = function (file, name, callback) {
+  THREE.ImageUtils.loadTexture(file, null, function (texture) {
+    var ret = {};
+    ret[name] = texture;
+
+    console.log('Loaded texture ', file);
+    callback(ret);
+  });
+};
+
+ThreeBox.preload.audio = function (file, name, callback) {
+  // Load binary file via AJAX
+  var request = new XMLHttpRequest();
+  request.open("GET", file, true);
+  request.responseType = "arraybuffer";
+
+  request.onload = function () {
+    var ret = {};
+    ret[name] = request.response;
+
+    console.log('Loaded audio ', file);
+    callback(ret);
+  };
+
+  request.send();
+}
 // Check dependencies.
 ;(function (deps) {
   for (var i in deps) {
@@ -39466,7 +39526,7 @@ ThreeRTT.toTarget = function (rtt) {
   if (ThreeRTT.Stage && (rtt instanceof ThreeRTT.Stage)) return rtt.target;
   // tQuery world
   if (ThreeRTT.World && (rtt instanceof ThreeRTT.World)) return rtt.target();
-  // RenderTarget
+  // RenderTarget or texture
   return rtt;
 }
 
@@ -39476,6 +39536,7 @@ ThreeRTT.toTexture = function (rtt, i) {
   rtt = ThreeRTT.toTarget(rtt);
   // Convert virtual RenderTarget object to uniform
   if (ThreeRTT.RenderTarget && (rtt instanceof ThreeRTT.RenderTarget)) return rtt.read();
+  return rtt;
 }
 
 // Make microevent methods chainable.
@@ -39494,8 +39555,7 @@ ThreeRTT.Stage = function (renderer, options) {
   options = _.extend({
     history:  0,
     camera:   {},
-    material: false, 
-    scene:    null//,
+    scene:    null,
   }, options);
 
   // Prefill aspect ratio.
@@ -39509,42 +39569,80 @@ ThreeRTT.Stage = function (renderer, options) {
   // Create virtual render target, passthrough options.
   this.target = new ThreeRTT.RenderTarget(renderer, options);
 
-  // If using buffered mode, draw the last rendered frame as background 
-  // to avoid flickering unless overridden.
-  if (options.history >= 0) {
-    options.material = options.material || new ThreeRTT.FragmentMaterial(this);
-  }
+  // Prepare data structures.
+  this.reset();
 
-  // Prepare full-screen quad to help render every pixel once (baking textures).
-  if (options.material) {
-    this.material(options.material);
-  }
+  // Set size and aspect
+  this.size(options.width, options.height);
 }
 
 ThreeRTT.Stage.prototype = {
 
-  // Set/remove the default full-screen quad surface material
-  material: function (material) {
-    if (material) {
-      // Spawn fullscreen quad.
-      if (!this._surface) {
-        this._surface = new THREE.Mesh(new ThreeRTT.ScreenGeometry(), {});
-        this._surface.frustumCulled = false;
-        this.scene.add(this._surface);
-      }
-      this._surface.material = material;
+  options: function () {
+    return this.target.options;
+  },
+
+  reset: function () {
+    if (this.renderables) {
+      _.each(this.renderables, function (surface) {
+        this.scene.remove(surface);
+      }.bind(this));
     }
-    else {
-      // Remove fullscreen quad.
-      this.scene.remove(this._surface);
-      this._surface = null;
+
+    this.passes   = [];
+    this.renderables = [];
+  },
+
+  // Add object render pass
+  paint: function (object, empty) {
+
+    // Create root to hold all objects for this pass
+    var root = new THREE.Object3D();
+    root.frustumCulled = false;
+    root.visible = true;
+
+    // Create a surface to render the last frame
+    if (!empty) {
+      var material = new ThreeRTT.FragmentMaterial(this, 'generic-fragment-texture');
+      var surface = this._surface(material);
+      root.add(surface);
     }
+
+    // Add object
+    root.add(object);
+
+    // Add root to scene and insert into pass list
+    this.scene.add(root);
+    this.passes.push(1);
+    this.renderables.push(root);
+  },
+
+  // Add iteration pass
+  iterate: function (n, material) {
+
+    // Create a surface to render the pass with
+    var surface = this._surface(material);
+    surface.visible = false;
+
+    // Add surface to scene and insert into pass list
+    this.scene.add(surface);
+    this.passes.push(n);
+    this.renderables.push(surface);
+
+    return this;
+  },
+
+  // Add regular fragment pass
+  fragment: function (material) {
+    this.iterate(1, material);
 
     return this;
   },
 
   // Resize render-to-texture
   size: function (width, height) {
+    width = Math.floor(width);
+    height = Math.floor(height);
     this.camera.aspect = width / height;
     this.target.size(width, height);
     return this;
@@ -39563,7 +39661,20 @@ ThreeRTT.Stage.prototype = {
   // Render virtual render target.
   render: function () {
 	  this.target.clear();
-    this.target.render(this.scene, this.camera);
+
+    function toggle(object, value) {
+      object.visible = value;
+      _.each(object.children, function (object) { toggle(object, value); });
+    }
+
+    _.each(this.passes, function (n, i) {
+      toggle(this.renderables[i], true);
+      _.loop(n, function (i) {
+        this.target.render(this.scene, this.camera);
+      }.bind(this));
+      toggle(this.renderables[i], false);
+    }.bind(this));
+
     return this;
   },
 
@@ -39580,29 +39691,36 @@ ThreeRTT.Stage.prototype = {
     this.scene = null;
     this.camera = null;
     this.target = null;
-  }
+  },
+
+  // Generate full screen surface with default properties.
+  _surface: function (material) {
+    var surface = new THREE.Mesh(new ThreeRTT.ScreenGeometry(), {});
+    surface.frustumCulled = false;
+    surface.material = material;
+    surface.renderDepth = Infinity;
+
+    return surface;
+  },
+
 }
 /**
  * Compose render-to-textures into a scene by adding a full screen quad
  * that uses the textures as inputs.
  */
-ThreeRTT.Compose = function (scene, rtts, fragmentShader, textures, uniforms) {
+ThreeRTT.Compose = function (rtts, fragmentShader, textures, uniforms) {
+  THREE.Object3D.call(this);
+
   // Create full screen quad.
   var material = new ThreeRTT.FragmentMaterial(rtts, fragmentShader, textures, uniforms);
   var geometry = new ThreeRTT.ScreenGeometry();
-  var mesh = new THREE.Mesh(geometry, material);
+  var mesh = this.mesh = new THREE.Mesh(geometry, material);
   mesh.frustumCulled = false;
-  scene.add(mesh);
 
-  // Remember scene/mesh association.
-  this.scene = scene;
-  this.mesh = mesh;
+  this.add(mesh);
 }
 
-// Remove fullscreen quad
-ThreeRTT.Compose.prototype.remove = function () {
-  this.scene.remove(this.mesh);
-};
+ThreeRTT.Compose.prototype = new THREE.Object3D();
 // Handy Camera factory
 ThreeRTT.Camera = function (options) {
   // Camera passthrough
@@ -39668,7 +39786,7 @@ ThreeRTT.RenderTarget = function (renderer, options) {
     width:         256,
     height:        256,
     texture:       {},
-    clear:         { color: false, depth: true, stencil: true },
+    clear:         { color: false, depth: false, stencil: false },
     clearColor:    0xFFFFFF,
     clearAlpha:    1,
     history:       0,
@@ -39701,7 +39819,7 @@ ThreeRTT.RenderTarget.prototype = {
   // Retrieve virtual target for reading from, n frames back.
   read: function (n) {
     // Clamp history to available buffers minus write buffer.
-    n = Math.min(this.options.history, Math.abs(n || 0));
+    n = Math.max(0, Math.min(this.options.history, Math.abs(n || 0)));
     return this.virtuals[n];
   },
 
@@ -39778,7 +39896,9 @@ ThreeRTT.RenderTarget.prototype = {
   allocateVirtuals: function () {
     var original = this.targets[0],
         virtuals  = this.virtuals || [];
-        n = this.buffers - 1; // One buffer reserved for writing at any given time
+        n = Math.max(1, this.buffers - 1);
+        // One buffer reserved for writing at any given time,
+        // unless there is no history.
 
     // Keep virtual targets around if possible.
     if (n > virtuals.length) {
@@ -39810,15 +39930,16 @@ ThreeRTT.RenderTarget.prototype = {
         targets  = this.targets,
         virtuals = this.virtuals,
         index    = this.index,
-        n        = this.buffers;
+        n        = this.buffers,
+        v        = virtuals.length;
 
     // Advance cyclic index.
     this.index = index = (index + 1) % n;
 
     // Point virtual render targets to last rendered frame(s) in order.
-    _.loop(n - 1, function (i) {
+    _.loop(v, function (i) {
       var dst = virtuals[i],
-          src = targets[(n - 1 - i + index) % n];
+          src = targets[(v - i + index) % n];
 
       dst.__webglTexture      = src.__webglTexture;
       dst.__webglFramebuffer  = src.__webglFramebuffer;
@@ -39879,8 +40000,7 @@ ThreeRTT.RenderTarget.prototype = {
       }.bind(this));
       return {
         type: 'tv',
-        value: i,
-        texture: textures,
+        value: textures,
         count: n + 1//,
       };
     }
@@ -39908,7 +40028,7 @@ ThreeRTT.ScreenGeometry = function () {
 /**
  * Helper for making ShaderMaterials that read from textures and write out processed fragments.
  */
-ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, uniforms) {
+ThreeRTT.ShaderMaterial = function (renderTargets, vertexShader, fragmentShader, textures, uniforms) {
 
   // Autoname texture uniforms as texture1, texture2, ...
   function textureName(j) {
@@ -39924,7 +40044,9 @@ ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, u
     textures = object;
   }
   // Allow passing single texture/object
-  else if (textures) {
+  else if (textures instanceof THREE.Texture
+        || textures instanceof ThreeRTT.World
+        || textures instanceof THREE.WebGLRenderTarget) {
     textures = { texture1: textures };
   }
 
@@ -39958,7 +40080,7 @@ ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, u
   _.each(renderTargets, function (target, j) {
     // Create texture1, texture2, ... uniforms.
     var key = textureName(j);
-    if (!uniforms[key]) {
+    if (target.read && !uniforms[key]) {
       uniforms[key] = {
         type: 't',
         value: target.read()//,
@@ -39974,27 +40096,49 @@ ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, u
   // Update sampleStep uniform on render of source.
   var callback;
   renderTargets[0].on('render', callback = function () {
+    var texture = renderTargets[0].options.texture;
+    var wrapS = texture.wrapS;
+    var wrapT = texture.wrapT;
+
+    var offset = {
+      1000: 0, // repeat
+      1001: 1, // clamp
+      1002: 0, // mirrored
+    };
+
     var value = uniforms.sampleStep.value;
 
-    value.x = 1 / (renderTargets[0].width - 1);
-    value.y = 1 / (renderTargets[0].height - 1)
+    value.x = 1 / (renderTargets[0].width - (offset[wrapS]||0));
+    value.y = 1 / (renderTargets[0].height - (offset[wrapT]||0));
   });
 
   // Lookup shaders and build material
   var material = new THREE.ShaderMaterial({
     uniforms:       uniforms,
-    vertexShader:   ThreeRTT.getShader('generic-vertex-screen'),
+    vertexShader:   ThreeRTT.getShader(vertexShader || 'generic-vertex'),
     fragmentShader: ThreeRTT.getShader(fragmentShader || 'generic-fragment-texture')//,
   });
-  material.side = THREE.DoubleSide;
-
-  // Disable depth buffer for RTT operations.
-  //material.depthTest = true;
-  //material.depthWrite = false;
-  //material.transparent = true;
 
   return material;
-};/**
+};
+/**
+ * Helper for making ShaderMaterials that read from textures and write out processed fragments.
+ */
+ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, uniforms) {
+
+  var material = new ThreeRTT.ShaderMaterial(
+                  renderTargets, 'generic-vertex-screen', fragmentShader, textures, uniforms);
+
+  // Disable depth buffer for RTT fragment operations by default.
+  material.side = THREE.DoubleSide;
+  material.depthTest = false;
+  material.depthWrite = false;
+  material.transparent = true;
+  material.blending = THREE.NoBlending;
+
+  return material;
+};
+/**
  * Specialized ShaderMaterial for downsampling a texture by a factor of 2 with anti-aliasing.
  */
 ThreeRTT.DownsampleMaterial = function (renderTargetFrom, renderTargetTo) {
@@ -40012,8 +40156,7 @@ ThreeRTT.DownsampleMaterial = function (renderTargetFrom, renderTargetTo) {
     },
     texture: {
       type: 't',
-      value: 0,
-      texture: renderTargetFrom.read()//,
+      value: renderTargetFrom.read()//,
     }//,
   });
 
@@ -40032,11 +40175,20 @@ ThreeRTT.DownsampleMaterial = function (renderTargetFrom, renderTargetTo) {
   });
 
   // Lookup shaders and build material
-  return new THREE.ShaderMaterial({
+  var material = new THREE.ShaderMaterial({
     uniforms:       uniforms,
     vertexShader:   ThreeRTT.getShader('rtt-vertex-downsample'),
     fragmentShader: ThreeRTT.getShader('generic-fragment-texture')//,
   });
+
+  // Disable depth buffer for RTT operations by default.
+  material.side = THREE.DoubleSide;
+  material.depthTest = false;
+  material.depthWrite = false;
+  material.transparent = true;
+  material.blending = THREE.NoBlending;
+
+  return material;
 };/**
  * Helper for making ShaderMaterials that raytrace in camera space per pixel.
  */
@@ -40057,7 +40209,9 @@ ThreeRTT.RaytraceMaterial = function (renderTarget, fragmentShader, textures, un
     });
   }
   // Allow passing single texture/object
-  else if (textures.constructor != Object) {
+  else if (textures instanceof THREE.Texture
+        || textures instanceof ThreeRTT.World
+        || textures instanceof THREE.WebGLRenderTarget) {
     textures = { texture1: textures };
   }
 
@@ -40105,6 +40259,55 @@ ThreeRTT.RaytraceMaterial = function (renderTarget, fragmentShader, textures, un
     fragmentShader: ThreeRTT.getShader(fragmentShader)//,
   });
 };/**
+ * Debug/testing helper that displays the given rendertargets in a grid
+ */
+ThreeRTT.Display = function (targets, gx, gy) {
+  if (!(targets instanceof Array)) {
+    targets = [targets];
+  }
+
+  this.gx = gx || targets.length;
+  this.gy = gy || 1;
+  this.targets = targets;
+  this.n = targets.length;
+
+  THREE.Object3D.call(this);
+  this.make();
+}
+
+ThreeRTT.Display.prototype = _.extend(new THREE.Object3D(), {
+
+  make: function () {
+    var n = this.n,
+        gx = this.gx,
+        gy = this.gy,
+        targets = this.targets;
+
+    var igx = (gx - 1) / 2,
+        igy = (gy - 1) / 2;
+
+    var geometry = new THREE.PlaneGeometry(1, 1, 1, 1);
+    var i = 0;
+    for (var y = 0; i < n && y < gy; ++y) {
+      for (var x = 0; i < n && x < gx; ++x, ++i) {
+        var material = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          map: ThreeRTT.toTexture(targets[i]),
+          fog: false
+        });
+        material.side = THREE.DoubleSide;
+
+        var mesh = new THREE.Mesh(geometry, material);
+        mesh.renderDepth = 10000 + Math.random();
+        this.add(mesh);
+
+        if (gx > 1) mesh.position.x = -igx + x;
+        if (gy > 1) mesh.position.y =  igy - y;
+      }
+    }
+  }
+
+});/**
  * Handle a world for rendering to texture (tQuery).
  *
  * @param world (object) World to sync rendering to.
@@ -40153,7 +40356,7 @@ ThreeRTT.World  = function (world, options) {
 
   // Add to RTT queue at specified order.
   this.queue = ThreeRTT.RenderQueue.bind(world);
-  this.queue.add(this);
+  if (options.autoRendering) this.queue.add(this);
 
   // Update sizing state
   this.size(options.width, options.height, true);
@@ -40182,20 +40385,37 @@ ThreeRTT.World.prototype = _.extend(new THREE.Object3D(), tQuery.World.prototype
     return this._options.autoSize;
   },
 
+  // Adjust in response to size changes
+  adjust: function (ignore) {
+    var scale = this._options.scale;
+    var width = this._options.width,
+        height = this._options.height;
+
+    if (this._options.autoSize) {
+      // Resize immediately based off parent scale.
+      var opts = this._world._opts;
+      width = opts.renderW,
+      height = opts.renderH;
+    }
+
+    width /= scale;
+    height /= scale;
+
+    // Compatibility with tQuery world
+    this._opts = {
+      renderW: width ,
+      renderH: height//,
+    };
+
+    // Ignore on init.
+    ignore || this._stage.size(width, height)
+  },
+
   // Change the autoscale factor
   scale: function (scale) {
     if (scale) {
       this._options.scale = scale;
-
-      if (this._options.autoSize) {
-        // Resize immediately based off parent scale.
-        var opts = this._world._opts,
-            width = opts.renderW / scale,
-            height = opts.renderH / scale;
-
-        this.size(width, height);
-      }
-
+      this.adjust();
       return this;
     }
 
@@ -40208,23 +40428,80 @@ ThreeRTT.World.prototype = _.extend(new THREE.Object3D(), tQuery.World.prototype
       this._options.width = width;
       this._options.height = height;
 
-      // Compatibility with tQuery world
-      this._opts = {
-        renderW: width,
-        renderH: height//,
-      };
-
       // Ignore on init.
-      ignore || this._stage.size(width, height);
+      this.adjust(ignore);
       return this;
     }
 
     return { width: this._options.width, height: this._options.height };
   },
 
-  // Set/remove the default full-screen quad surface material
-  material: function (material) {
-    this._stage.material(material);
+  // Get stage options
+  options: function () {
+    return this._stage.options();
+  },
+
+  // Reset all passes
+  reset: function () {
+    this._stage.reset();
+    return this;
+  },
+
+  // Add a painting rendering pass
+  paint: function (object, empty) {
+    this._stage.paint(object, empty);
+    return this;
+  },
+
+  // Add an iterated rendering pass
+  iterate: function (n, fragmentShader, textures, uniforms) {
+    var material = fragmentShader instanceof THREE.Material
+                 ? fragmentShader
+                 : tQuery.createFragmentMaterial(
+                    this, fragmentShader, textures, uniforms);
+
+    this._stage.iterate(n, material);
+    return this;
+  },
+
+  // Add a fragment rendering pass
+  fragment: function (fragmentShader, textures, uniforms) {
+    var material = fragmentShader instanceof THREE.Material
+                 ? fragmentShader
+                 : tQuery.createFragmentMaterial(
+                    this, fragmentShader, textures, uniforms);
+
+    this._stage.fragment(material);
+    return this;
+  },
+
+  // Add a raytrace rendering pass
+  raytrace: function (fragmentShader, textures, uniforms) {
+    var material = fragmentShader instanceof THREE.Material
+                 ? fragmentShader
+                 : tQuery.createRaytraceMaterial(
+                    this, fragmentShader, textures, uniforms);
+
+    this._stage.fragment(material);
+    return this;
+  },
+
+  // Add a downsample rendering pass
+  downsample: function (worldFrom) {
+    // Force this world to right size now if not autosizing
+    if (!worldFrom.autoSize()) {
+      var size = worldFrom.size();
+      this._options.width = size.width;
+      this._options.height = size.height;
+    }
+
+    // Force this world to right scale (will autosize)
+    var scale = worldFrom.scale();
+    this.scale(scale * 2);
+
+    var material = tQuery.createDownsampleMaterial(worldFrom, this);
+    this._stage.fragment(material);
+
     return this;
   },
 
@@ -40240,23 +40517,10 @@ ThreeRTT.World.prototype = _.extend(new THREE.Object3D(), tQuery.World.prototype
 
   // Render this world.
   render: function () {
-
-  	// Render the scene 
-  	if (this._autoRendering) {
-      // Render to write target.
-  	  this._stage.render();
-	  }
+    // Render to write target.
+    this._stage.render();
 
     return this;
-  },
-
-  // Update this world manually.
-  update: function () {
-    // If not autorendering
-    if (!this._autoRendering) {
-      // Render to write target.
-  	  this._stage.render();
-    }
   },
 
   // Destroy/unlink this world.
@@ -40363,42 +40627,18 @@ tQuery.World.registerInstance('rtt', function (options) {
  * Add a surface showing a render-to-texture surface to this world.
  */
 tQuery.World.registerInstance('compose', function (rtts, fragmentShader, textures, uniforms) {
-  tQuery.composeRTT(this, rtts, fragmentShader, textures, uniforms);
-  return this;
+  var compose = tQuery.createComposeRTT(rtts, fragmentShader, textures, uniforms);
+  this.add(compose);
+  return compose;
 });
 
 /**
- * Apply a fragment material to this RTT world.
+ * Add a surface showing a render-to-texture surface to this world.
  */
-ThreeRTT.World.registerInstance('fragment', function (fragmentShader, textures, uniforms) {
-  this.material(tQuery.createFragmentMaterial(this, fragmentShader, textures, uniforms));
-  return this;
-});
-
-/**
- * Apply a raytrace material to this RTT world.
- */
-ThreeRTT.World.registerInstance('raytrace', function (fragmentShader, textures, uniforms) {
-  this.material(tQuery.createRaytraceMaterial(this, fragmentShader, textures, uniforms));
-  return this;
-});
-
-/**
- * Apply a downsample material to this RTT world, sampling from the given world.
- */
-ThreeRTT.World.registerInstance('downsample', function (worldFrom) {
-  // Force this world to right scale (will autosize)
-  var scale = worldFrom.scale();
-  this.scale(scale * 2);
-
-  // Force this world to right size now if not autosizing
-  if (!worldFrom.autoSize) {
-    var size = worldFrom.size();
-    this.size(size.width / 2, size.height / 2);
-  }
-
-  this.material(tQuery.createDownsampleMaterial(worldFrom, this));
-  return this;
+tQuery.World.registerInstance('display', function (targets, gx, gy) {
+  var display = tQuery.createDisplayRTT(targets, gx, gy);
+  this.add(display);
+  return display;
 });
 
 /**
@@ -40410,10 +40650,24 @@ tQuery.registerStatic('createRTT', function (world, options) {
 });
 
 /**
- * Create a surface showing a render-to-texture image in this world.
+ * Composite a render-to-texture image full screen
  */
-tQuery.registerStatic('composeRTT', function (world, rtts, fragmentShader, textures, uniforms) {
-  return new ThreeRTT.Compose(world.tScene(), rtts, fragmentShader, textures, uniforms);
+tQuery.registerStatic('createComposeRTT', function (rtts, fragmentShader, textures, uniforms) {
+  return new ThreeRTT.Compose(rtts, fragmentShader, textures, uniforms);
+});
+
+/**
+ * Create a display surface showing one or more textures in a grid.
+ */
+tQuery.registerStatic('createDisplayRTT', function (targets, gx, gy) {
+  return new ThreeRTT.Display(targets, gx, gy);
+});
+
+/**
+ * Create a ShaderMaterial.
+ */
+tQuery.registerStatic('createShaderMaterial', function (worlds, vertexShader, fragmentShader, textures, uniforms) {
+  return new ThreeRTT.FragmentMaterial(worlds, vertexShader, fragmentShader, textures, uniforms);
 });
 
 /**
@@ -41869,7 +42123,8 @@ MathBox.Animator.prototype = {
   update: function (speed) {
     MathBox.Animator.now += speed; // Use synchronized clock
 
-    _.each(this.active, function (object) {
+    var active = this.active.slice();
+    _.each(active, function (object) {
       _.each(object.__queue, function update(queue, key) {
         // Write out animated attribute.
         var animation = queue[0];
@@ -42056,7 +42311,8 @@ MathBox.Animator.Animation.prototype = {
       }
     }
 
-    this.object.set(this.key, process(from, to), true);
+    var value = process(from, to);
+    this.object.set(this.key, value, true);
   },
 
   skip: function () {
@@ -44225,6 +44481,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
   calculate: function (viewport) {
     var vertices = this.vertices,
+        arrows = this.arrows,
         points = this.points,
         options = this.get(),
         data = options.data,
@@ -44266,13 +44523,19 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         current.subSelf(last);
         var l = current.length();
 
+        var clipped = Math.min(1, l * .5 / size);
+        clipped = (1 - (1 - clipped) * (1 - clipped)) * size;
+
         // Foreshorten line
-        var f = l - size;
+        var f = l - clipped;
         current.normalize().multiplyScalar(f).addSelf(last);
 
         // Transform back
         viewport.from(current);
         vertices[i].copy(current);
+
+        // Set arrowhead size
+        arrows[k].set({ size: clipped });
       }
 
       // Start/end + vector indices
@@ -45514,10 +45777,12 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         sy = s[1],
         sz = s[2];
 
+    // Watch for negative scales.
+    var idx = dx > 0 ? 1 : -1;
+
     // Adjust viewport range for polar transform.
     // As the viewport goes polar, the X-range is interpolated to the Y-range instead,
     // creating a perfectly circular viewport.
-    var idx = dx > 0 ? 1 : -1;
     var ady = Math.abs(dy);
     var fdx = dx+(ady*idx-dx)*alpha;
     var sdx = fdx/sx, sdy = dy/sy;
@@ -45701,11 +45966,16 @@ MathBox.ViewportSphere.prototype = _.extend(new MathBox.ViewportCartesian(null),
         sy = s[1],
         sz = s[2];
 
+    // Watch for negative scales.
+    var idx = dx > 0 ? 1 : -1;
+    var idy = dy > 0 ? 1 : -1;
+
     // Adjust viewport for sphere.
     // As the viewport goes spherical, the X/Y-ranges are interpolated to the Z-range,
     // creating a perfectly spherical viewport.
-    var fdx = dx+(dz-dx)*alpha;
-    var fdy = dy+(dz-dy)*alpha;
+    var adz = Math.abs(dz);
+    var fdx = dx+(adz*idx-dx)*alpha;
+    var fdy = dy+(adz*idy-dy)*alpha;
     var sdx = fdx/sx,
         sdy = fdy/sy,
         sdz = dz/sz;

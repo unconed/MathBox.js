@@ -429,14 +429,11 @@ uniform vec2 sampleAlignment;
 varying vec2 vUV;
 
 void main() {
-  // Flip Y to pass culling test in clip space.
-  vec2 uvFlip = vec2(uv.x, 1.0 - uv.y);
+  // Correct to where samples are bilinearly interpolated in case of odd downsample.
+  vUV = uv * sampleAlignment.xy;
 
   // Convert UV to absolute XY.
-  vec2 xy = uvFlip * 2.0 - 1.0;
-
-  // Correct to where samples are bilinearly interpolated in case of odd downsample.
-  vUV = uvFlip.xy * sampleAlignment.xy;
+  vec2 xy = uv * 2.0 - 1.0;
 
   // Draw at end of clip space to allow other objects to occlude.
   gl_Position = vec4(xy, 1.0, 1.0);

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Test: Atomicity.</title>
+
+  <!--
+    Tests whether property changes are applied immediately and without a frame of lag.
+  -->
+
+  <style type="text/css" media="screen">
+    html, body { height: 100%; }
+    body { margin: 0; padding: 0 }
+    canvas { display: block }
+  </style>
+
+  <script type="text/javascript" charset="utf-8" src="../vendor/domready.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
+
+  <script type="text/javascript" charset="utf-8">
+  window.requestAnimationFrame = function (c) {
+    setTimeout(function () {
+      console.log('----------------');
+      c();
+    }, 1000);
+  }
+  /**
+   * Bootstrap
+   */
+  DomReady.ready(function() {
+    ThreeBox.preload([
+      '../shaders/snippets.glsl.html',
+    ], function () {
+
+      // MathBox boilerplate
+      var mathbox = window.mathbox = mathBox({
+        cameraControls: true,
+        cursor:         true,
+        controlClass:   ThreeBox.OrbitControls,
+        elementResize:  true,
+        fullscreen:     true,
+        screenshot:     true,
+        stats:          false,
+        scale:          1,
+      }).start();
+
+      // Viewport camera/setup
+      mathbox
+        // Cartesian viewport
+        .viewport({
+          type: 'polar',
+          range: [[-π, π], [-2, 2]],
+          scale: [1, 1],
+          polar: 1,
+          fold: 2,
+          power: 2,
+        })
+        .camera({
+          orbit: 3.5,
+          phi: τ/6,
+          theta: 0.3,
+        })
+        .transition(200)
+
+        // Setup
+        .grid({
+          n: [64, 2],
+        })
+        .curve({
+          n: 1,
+          pointSize: 20,
+          data: [[1, 1]],
+          points: true,
+          line: false,
+        })
+
+        // Instant change
+        .animate('viewport', { fold: 1, power: 1 }, { duration: 0, delay: 320 })
+        .animate('curve', { data: [[2, 1]] }, { duration: 0, delay: 320 })
+
+    });
+  });
+  </script>
+  
+  <script type="text/javascript" charset="utf-8">
+  </script>
+
+</head>
+<body>
+</body>
+</html>
