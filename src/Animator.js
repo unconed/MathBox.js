@@ -170,7 +170,8 @@ MathBox.Animator.prototype = {
   update: function (speed) {
     MathBox.Animator.now += speed; // Use synchronized clock
 
-    _.each(this.active, function (object) {
+    var active = this.active.slice();
+    _.each(active, function (object) {
       _.each(object.__queue, function update(queue, key) {
         // Write out animated attribute.
         var animation = queue[0];
@@ -357,7 +358,8 @@ MathBox.Animator.Animation.prototype = {
       }
     }
 
-    this.object.set(this.key, process(from, to), true);
+    var value = process(from, to);
+    this.object.set(this.key, value, true);
   },
 
   skip: function () {
