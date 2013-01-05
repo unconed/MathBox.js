@@ -25,6 +25,8 @@ MathBox.Style.prototype = {
       worldRotation: new THREE.Vector3(),
       worldPosition: new THREE.Vector3(),
       zIndex: 0.0,
+
+      mapOpacity: 0,
     };
   },
 

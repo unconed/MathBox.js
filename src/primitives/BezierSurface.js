@@ -31,6 +31,7 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
       doubleSided: true,
       flipSided: false,
       shaded: true,
+      map: null,
       style: {}//,
     };
   },

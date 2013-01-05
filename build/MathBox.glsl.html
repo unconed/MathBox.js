@@ -312,6 +312,11 @@ void vertexOutput(in vec4 position, in vec3 viewPosition) {
 // Fragment shader: render a shaded surface fragment.
 uniform vec3 color;
 uniform float opacity;
+uniform float mapOpacity;
+
+uniform sampler2D texture;
+varying vec2 vUV;
+
 varying vec3 vNormal;
 varying vec3 vViewPosition;
 uniform float flipSided;
@@ -337,7 +342,9 @@ void fragmentShaded() {
 	float dotNormalHalf = max(dot(normal, halfVector), 0.0);
 	float specular = max(pow(dotNormalHalf, shininess), 0.0);
 
-  gl_FragColor = vec4(color * diffuse + specular * .3, opacity);
+  vec4 sample = texture2D(texture, vUV);
+  vec3 textured = color + (color * sample.xyz - color) * mapOpacity * sample.w;
+  gl_FragColor = vec4(textured * diffuse + specular * .3, opacity);
 }
 </script>
 
@@ -345,10 +352,17 @@ void fragmentShaded() {
 // Fragment shader: render a solid surface fragment.
 uniform vec3 color;
 uniform float opacity;
+uniform float mapOpacity;
+
+uniform sampler2D texture;
+varying vec2 vUV;
 
 void fragmentSolid() {
   if (opacity < 0.01) discard;
-  gl_FragColor = vec4(color, opacity);
+
+  vec4 sample = texture2D(texture, vUV);
+  vec3 textured = color + (color * sample.xyz - color) * mapOpacity * sample.w;
+  gl_FragColor = vec4(textured, opacity);
 }
 </script>
 

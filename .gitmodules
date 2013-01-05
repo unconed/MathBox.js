@@ -7,3 +7,6 @@
 [submodule "vendor/ThreeRTT.js"]
 	path = vendor/ThreeRTT.js
 	url = https://github.com/unconed/ThreeRTT.js
+[submodule "vendor/console-extras"]
+	path = vendor/console-extras
+	url = https://github.com/unconed/console-extras.js.git

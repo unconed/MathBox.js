@@ -326,6 +326,8 @@ Bezier Surface
   doubleSided: true,                   // Whether the mesh is double sided
   flipSided: false,                    // Whether to flip a single sided mesh
   shaded: true,                        // Whether to shade the surface
+  map: null,                           // Texture Map (pass in THREE.Texture)
+  mapOpacity: 0,                       // Opacity of texture map
 })
 ```
 
@@ -370,6 +372,8 @@ Surface
   doubleSided: true,                     // Whether the mesh is double sided
   flipSided: false,                      // Whether to flip a single sided mesh
   shaded: true,                          // Whether to shade the surface
+  map: null,                             // Texture Map (pass in THREE.Texture)
+  mapOpacity: 0,                         // Opacity of texture map
 })
 ```
 

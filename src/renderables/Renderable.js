@@ -81,9 +81,14 @@ MathBox.Renderable.prototype = {
     }
 
     if (this.material) {
+      options = this.get();
+
+      // Apply texture
+      if (options.map) {
+        this.material.uniforms.texture.value = options.map;
+      }
 
       // Set double sided / culling order.
-      options = this.get();
       this.material.side = options.doubleSided ? THREE.DoubleSide :
                            THREE.FrontSide;
       options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };

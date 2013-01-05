@@ -1641,6 +1641,8 @@ MathBox.Style.prototype = {
       worldRotation: new THREE.Vector3(),
       worldPosition: new THREE.Vector3(),
       zIndex: 0.0,
+
+      mapOpacity: 0,
     };
   },
 
@@ -2732,6 +2734,7 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       doubleSided: true,
       flipSided: false,
       shaded: true,
+      map: null,
       style: {}//,
     };
   },
@@ -2774,7 +2777,8 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       doubleSided: options.doubleSided,
       flipSided: options.flipSided,
       shaded: options.shaded,
-      dynamic: options.live
+      dynamic: options.live,
+      map: options.map,
     }, style);
     this.line = new MathBox.Renderable.Mesh(geometry, {
       type: 'mesh',
@@ -2948,6 +2952,7 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
       doubleSided: true,
       flipSided: false,
       shaded: true,
+      map: null,
       style: {}//,
     };
   },
@@ -3168,9 +3173,14 @@ MathBox.Renderable.prototype = {
     }
 
     if (this.material) {
+      options = this.get();
+
+      // Apply texture
+      if (options.map) {
+        this.material.uniforms.texture.value = options.map;
+      }
 
       // Set double sided / culling order.
-      options = this.get();
       this.material.side = options.doubleSided ? THREE.DoubleSide :
                            THREE.FrontSide;
       options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };
