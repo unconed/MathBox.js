@@ -297,6 +297,9 @@ MathBox.Animator.Animation.prototype = {
       if (to === undefined) {
         to = from;
       }
+      if (from === undefined) {
+        from = to;
+      }
       if (to === from) {
         return from;
       }
@@ -354,7 +357,14 @@ MathBox.Animator.Animation.prototype = {
             out.b = lerp(from.b, to.b);
             return out;
           }
-          throw "Unimplemented value type in animator. "+(typeof to)+" ("+ to.constructor +")";
+          if (!from) {
+            return to;
+          }
+          if (!to) {
+            return from;
+          }
+          return (fraction > .5) ? to : from;
+          //throw "Unimplemented value type in animator. "+(typeof to)+" ("+ to.constructor +")";
       }
     }
 
