@@ -68,7 +68,7 @@ MathBox.Director.prototype = {
       case 'set':
         targets = stage.select(selector);
         _.each(targets, function (primitive) {
-          var duration = animate && Math.min(300, animate.duration) || 300;
+          var duration = Math.min(300, (animate && (animate.duration !== undefined)) ? animate.duration : 300);
           inverse.push([
             verb,
             primitive.singleton || primitive.get('sequence'),
