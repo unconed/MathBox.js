@@ -139,10 +139,12 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
         sy = s[1],
         sz = s[2];
 
+    // Watch for negative scales.
+    var idx = dx > 0 ? 1 : -1;
+
     // Adjust viewport range for polar transform.
     // As the viewport goes polar, the X-range is interpolated to the Y-range instead,
     // creating a perfectly circular viewport.
-    var idx = dx > 0 ? 1 : -1;
     var ady = Math.abs(dy);
     var fdx = dx+(ady*idx-dx)*alpha;
     var sdx = fdx/sx, sdy = dy/sy;

@@ -91,6 +91,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
   calculate: function (viewport) {
     var vertices = this.vertices,
+        arrows = this.arrows,
         points = this.points,
         options = this.get(),
         data = options.data,
@@ -132,13 +133,19 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         current.subSelf(last);
         var l = current.length();
 
+        var clipped = Math.min(1, l * .5 / size);
+        clipped = (1 - (1 - clipped) * (1 - clipped)) * size;
+
         // Foreshorten line
-        var f = l - size;
+        var f = l - clipped;
         current.normalize().multiplyScalar(f).addSelf(last);
 
         // Transform back
         viewport.from(current);
         vertices[i].copy(current);
+
+        // Set arrowhead size
+        arrows[k].set({ size: clipped });
       }
 
       // Start/end + vector indices

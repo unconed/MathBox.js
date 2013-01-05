@@ -128,11 +128,16 @@ MathBox.ViewportSphere.prototype = _.extend(new MathBox.ViewportCartesian(null),
         sy = s[1],
         sz = s[2];
 
+    // Watch for negative scales.
+    var idx = dx > 0 ? 1 : -1;
+    var idy = dy > 0 ? 1 : -1;
+
     // Adjust viewport for sphere.
     // As the viewport goes spherical, the X/Y-ranges are interpolated to the Z-range,
     // creating a perfectly spherical viewport.
-    var fdx = dx+(dz-dx)*alpha;
-    var fdy = dy+(dz-dy)*alpha;
+    var adz = Math.abs(dz);
+    var fdx = dx+(adz*idx-dx)*alpha;
+    var fdy = dy+(adz*idy-dy)*alpha;
     var sdx = fdx/sx,
         sdy = fdy/sy,
         sdz = dz/sz;
