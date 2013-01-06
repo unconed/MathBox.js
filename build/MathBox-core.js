@@ -278,13 +278,16 @@ MathBox.Animator.prototype = {
 
     var active = this.active.slice();
     _.each(active, function (object) {
+      // Used to make queued animations match up at sub-frame times.
+      var offset = 0;
       _.each(object.__queue, function update(queue, key) {
         // Write out animated attribute.
         var animation = queue[0];
-        value = animation.apply();
+        value = animation.apply(offset || 0);
 
         // Remove completed animations.
         if (animation.done()) {
+          offset = animation.extra();
           this.dequeue(object, key);
 
           // Recurse into next animation.
@@ -310,12 +313,12 @@ MathBox.Animator.Delay = function (object, key, duration) {
 
 MathBox.Animator.Delay.prototype = {
 
-  init: function () {
-    this.start = MathBox.Animator.now;
+  init: function (offset) {
+    this.start = MathBox.Animator.now - (offset || 0);
   },
 
-  apply: function () {
-    if (!this.start) this.init();
+  apply: function (offset) {
+    if (!this.start) this.init(offset);
     if (this.duration > 0) {
       this.fraction = Math.min(1, (MathBox.Animator.now - this.start) / this.duration);
     }
@@ -326,6 +329,10 @@ MathBox.Animator.Delay.prototype = {
 
   skip: function () {
     this.duration = 0;
+  },
+
+  extra: function () {
+    return MathBox.Animator.now - this.start - this.duration;
   },
 
   done: function () {
@@ -350,16 +357,16 @@ MathBox.Animator.Animation = function (object, key, value, duration, callback, e
 
 MathBox.Animator.Animation.prototype = {
 
-  init: function () {
-    this.start = MathBox.Animator.now;
+  init: function (offset) {
+    this.start = MathBox.Animator.now - (offset || 0);
     if (this.from === null) this.from = this.object.get(this.key);
     if (this.from === undefined) {
       this.from = 0;
     }
   },
 
-  apply: function () {
-    if (!this.start) this.init();
+  apply: function (offset) {
+    if (!this.start) this.init(offset);
 
     var object = this.object;
     var from = this.from;
@@ -482,6 +489,10 @@ MathBox.Animator.Animation.prototype = {
     this.duration = 0;
     this.fraction = 1;
     this.done();
+  },
+
+  extra: function () {
+    return MathBox.Animator.now - this.start - this.duration;
   },
 
   done: function () {
@@ -1386,6 +1397,9 @@ MathBox.Director.prototype = {
    * Get clock for slide
    */
   clock: function (step, reset) {
+    if (step > this.step) {
+      return 0;
+    }
     if (reset || !this.clocks[step]) this.clocks[step] = +new Date();
     return (+new Date() - this.clocks[step]) * .001;
   },
@@ -3594,6 +3608,10 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
             x = s * Math.round(unit * x) / unit;
             text = x;
           }
+        }
+
+        if (!mathjax) {
+          text = (''+text).replace(/^-/, '–');
         }
       }
 

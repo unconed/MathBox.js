@@ -105,6 +105,10 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
             text = x;
           }
         }
+
+        if (!mathjax) {
+          text = (''+text).replace(/^-/, '–');
+        }
       }
 
       if (sprite.content !== text) {
