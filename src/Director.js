@@ -20,6 +20,9 @@ MathBox.Director.prototype = {
    * Get clock for slide
    */
   clock: function (step, reset) {
+    if (step > this.step) {
+      return 0;
+    }
     if (reset || !this.clocks[step]) this.clocks[step] = +new Date();
     return (+new Date() - this.clocks[step]) * .001;
   },
