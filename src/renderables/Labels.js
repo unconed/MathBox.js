@@ -115,6 +115,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         var inner = sprite.element.children[0];
 
         sprite.content = text;
+        sprite.measure = true;
 
         if (mathjax) {
           inner.innerHTML = "\\(" + text + "\\)";

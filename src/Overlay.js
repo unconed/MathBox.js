@@ -71,9 +71,12 @@ MathBox.Overlay.prototype = {
 
   _measure: function (object, camera) {
     // Measure sprites
-    var element = object.element;
-    object.width = element.offsetWidth;
-    object.height = element.offsetHeight;
+    if (object.measure) {
+      var element = object.element;
+      object.width = element.offsetWidth;
+      object.height = element.offsetHeight;
+      object.measure = false;
+    }
   },
 
   _vis: function (object, camera) {
@@ -175,6 +178,7 @@ MathBox.Sprite = function (element, tangent, distance) {
   this.width = 0;
   this.height = 0;
   this.visible = true;
+  this.measure = true;
   this.content = '';
 
   element.style.position = 'absolute';
