@@ -1919,6 +1919,8 @@ MathBox.Overlay.prototype = {
         q = this.q,
         epsilon = 0.01;
 
+    var render = object.render;
+
     // Check visibility
     var visible = object.visible, parent = object.parent;
     while (visible && parent) {
@@ -1930,6 +1932,9 @@ MathBox.Overlay.prototype = {
     if (!object.render) {
       object.element.style.display = 'none';
       return;
+    }
+    else if (!render) {
+      object.element.style.display = 'block';
     }
 
     // Transform into camera space
@@ -1960,11 +1965,14 @@ MathBox.Overlay.prototype = {
     y = Math.round(y);
 
     // Set position
-    object.left = x;
-    object.top = y;
-    object.element.style.left = x + 'px';
-    object.element.style.top  = y + 'px';
-    object.element.style.display = 'block';
+    if (object.left != x) {
+      object.left = x;
+      object.element.style.left = x + 'px';
+    }
+    if (object.top != y) {
+      object.top = y;
+      object.element.style.top  = y + 'px';
+    }
 
   },
 
