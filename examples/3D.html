@@ -82,6 +82,7 @@
 
       // Arrow controls
       // Controls for stand-alone
+      var message = true;
       window.addEventListener('keydown', function (e) {
         if (e.keyCode == 38 || e.keyCode == 37) director.back();
         else if (e.keyCode == 40 || e.keyCode == 39) director.forward();
@@ -89,7 +90,13 @@
           return;
         }
 
-        document.getElementById('info').style.opacity = '0';
+        if (message) {
+          document.getElementById('info').innerHTML = "Maximize the browser, sit a comfortable distance away from the screen and cross your eyes until the two images overlap.";
+          message = false;
+        }
+        else {
+          document.getElementById('info').style.opacity = '0';
+        }
       });
 
       window.mathboxSetup(mathbox);
