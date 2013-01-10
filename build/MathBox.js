@@ -4564,18 +4564,27 @@ MathBox.Director.prototype = {
   /**
    * Go one step forward.
    */
-  forward: function (instant) {
+  forward: function (instant, delay) {
     if (this.step >= this.script.length) return;
 
     var step = this.script[this.step];
     var rollback = this.rollback[this.step] = [];
-
-    this.apply(step, rollback, instant || this.skipping());
     this.step++;
 
-    this.clock(this.step, true);
+    function apply() {
+      this.apply(step, rollback, instant || this.skipping());
 
-    this.emit('go', this.step, 1);
+      this.clock(this.step, true);
+
+      this.emit('go', this.step, 1);
+    }
+
+    if (delay) {
+      setTimeout(apply, +delay);
+    }
+    else {
+      apply();
+    }
 
     return this;
   },
@@ -4583,14 +4592,26 @@ MathBox.Director.prototype = {
   /**
    * Go one step backward.
    */
-  back: function (instant) {
+  back: function (instant, delay) {
     if (this.step <= 0) return;
 
     this.step--;
-    this.apply(this.rollback[this.step], null, instant || this.skipping());
-    delete this.rollback[this.step];
+    var step = this.script[this.step];
+    var rollback = this.rollback[this.step];
 
-    this.emit('go', this.step, -1);
+    function apply() {
+      this.apply(rollback, null, instant || this.skipping());
+      delete this.rollback[this.step];
+
+      this.emit('go', this.step, -1);
+    }
+
+    if (delay) {
+      setTimeout(apply, +delay);
+    }
+    else {
+      apply();
+    }
 
     return this;
   },
