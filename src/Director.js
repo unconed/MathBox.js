@@ -229,7 +229,7 @@ MathBox.Director.prototype = {
       this.clock(this.step, true);
 
       this.emit('go', this.step, 1);
-    }.bind();
+    }.bind(this);
 
     if (delay) {
       setTimeout(apply, +delay);
@@ -256,7 +256,7 @@ MathBox.Director.prototype = {
       delete this.rollback[this.step];
 
       this.emit('go', this.step, -1);
-    }.bind();
+    }.bind(this);
 
     if (delay) {
       setTimeout(apply, +delay);
