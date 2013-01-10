@@ -1600,13 +1600,13 @@ MathBox.Director.prototype = {
     var rollback = this.rollback[this.step] = [];
     this.step++;
 
-    function apply() {
+    var apply = function () {
       this.apply(step, rollback, instant || this.skipping());
 
       this.clock(this.step, true);
 
       this.emit('go', this.step, 1);
-    }
+    }.bind();
 
     if (delay) {
       setTimeout(apply, +delay);
@@ -1628,12 +1628,12 @@ MathBox.Director.prototype = {
     var step = this.script[this.step];
     var rollback = this.rollback[this.step];
 
-    function apply() {
+    var apply = function () {
       this.apply(rollback, null, instant || this.skipping());
       delete this.rollback[this.step];
 
       this.emit('go', this.step, -1);
-    }
+    }.bind()
 
     if (delay) {
       setTimeout(apply, +delay);
