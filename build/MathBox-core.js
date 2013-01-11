@@ -3221,6 +3221,9 @@ MathBox.Renderable.prototype = {
     var style = this.style.get();
 
     if (this.object) {
+      // No point in culling if everything is dynamic / GLSL based
+      this.object.frustumCulled = false;
+
       // Apply user-defined world transforms through three.js modelView matrix.
       this.object.position = style.worldPosition;
       this.object.rotation = style.worldRotation;
