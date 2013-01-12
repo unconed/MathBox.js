@@ -240,7 +240,7 @@ Also useful for visualizing complex operations in polar representation.
 ```javascript
 .viewport({
   type: 'polar',
-  range: [[-π, π], [-1, 1], [-1, 1]], // Range in X, Y, Z
+  range: [[-π, π], [-1, 1], [-1, 1]], // Range in X, Y, Z (Angle, Radius, Depth)
   polar: 1,                           // Morph between cartesian (0) and polar (1)
   fold:  1,                           // Fold the angles by this factor
   power: 1,                           // Apply this power to the radius
@@ -257,7 +257,7 @@ Spherical coordinate grid in radians. X is longitude, Y is latitude, Z is radius
 ```javascript
 .viewport({
   type: 'sphere',
-  range: [[-π, π], [-π/2, π/2], [-1, 1]], // Range in X, Y, Z
+  range: [[-π, π], [-π/2, π/2], [-1, 1]], // Range in X, Y, Z (Longitude, Latitude, Radius)
   sphere: 1,                              // Morph between cartesian (0) and spherical (1)
   scale: [1, 1, 1],                       // Scale in X, Y, Z
   rotation: [0, 0, 0],                    // Viewport rotation in Euler angles
