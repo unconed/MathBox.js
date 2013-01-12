@@ -7,7 +7,7 @@ MathBox is a library for rendering presentation-quality math diagrams in a brows
 
 MathBox can be operated manually using a tQuery-like API, or used in presentation mode with the included Director. This lets you to feed in a script of actions and step through them one by one, generating an automatic 'rollback' script to allow you to step backwards.
 
-MathBox was initially created for the conference talk "Making Things with Maths" at [Full Frontal 2012](http://2012.full-frontal.org) and is still a work in progress. There are a couple of important functionality gaps, such as a complete lack of axis and point labelling and inability to re-use styles consistently.
+MathBox was initially created for the conference talk "Making Things with Maths" at [Full Frontal 2012](http://2012.full-frontal.org) and is still a work in progress. There are a couple of important functionality gaps, such as labelling being limited to axes and inability to re-use styles easily.
 
 I've only tested thoroughly in Google Chrome, but Firefox seems to work well, with Opera at 90% functionality.
 
@@ -18,9 +18,10 @@ Examples
 
 * [Viewport, axis, vectors with labeling](http://acko.net/files/mathbox/MathBox.js/examples/Axis.html)
 * [Bezier surface (slideshow)](http://acko.net/files/mathbox/MathBox.js/examples/BezierSurface.html)
+* [Complex numbers (slideshow)](http://acko.net/files/mathbox/MathBox.js/examples/ComplexNumbers.html)
 * [Complex exponentiation 4D -> 3D](http://acko.net/files/mathbox/MathBox.js/examples/ComplexExponentiation.html)
 * [Surface/plane intersection](http://acko.net/files/mathbox/MathBox.js/examples/Intersections.html)
-* [Curve on the projective line](http://acko.net/files/mathbox/MathBox.js/examples/ProjectiveLine.html)
+* [Rational function on the projective line](http://acko.net/files/mathbox/MathBox.js/examples/ProjectiveLine.html)
 * [Warping cartesian into cylindrical coordinates](http://acko.net/files/mathbox/MathBox.js/examples/SurfaceWarp.html)
 * [Texture mapping a surface](http://acko.net/files/mathbox/MathBox.js/examples/TextureMap.html)
 * [Cross-eyed 3D](http://acko.net/files/mathbox/MathBox.js/examples/3D.html)
