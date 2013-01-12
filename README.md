@@ -15,14 +15,15 @@ I've only tested thoroughly in Google Chrome, but Firefox seems to work well, wi
 
 Examples
 --------
-[Viewport, axis, vectors with labeling](http://acko.net/files/mathbox/MathBox.js/examples/Axis.html)
-[Bezier surface (slideshow)](http://acko.net/files/mathbox/MathBox.js/examples/BezierSurface.html)
-[Complex exponentiation 4D -> 3D](http://acko.net/files/mathbox/MathBox.js/examples/ComplexExponentiation.html)
-[Surface/plane intersection](http://acko.net/files/mathbox/MathBox.js/examples/Intersections.html)
-[Curve on the projective line](http://acko.net/files/mathbox/MathBox.js/examples/ProjectiveLine.html)
-[Warping cartesian into cylindrical coordinates](http://acko.net/files/mathbox/MathBox.js/examples/SurfaceWarp.html)
-[Texture mapping a surface](http://acko.net/files/mathbox/MathBox.js/examples/TextureMap.html)
-[Cross-eyed 3D](http://acko.net/files/mathbox/MathBox.js/examples/3D.html)
+
+* [Viewport, axis, vectors with labeling](http://acko.net/files/mathbox/MathBox.js/examples/Axis.html)
+* [Bezier surface (slideshow)](http://acko.net/files/mathbox/MathBox.js/examples/BezierSurface.html)
+* [Complex exponentiation 4D -> 3D](http://acko.net/files/mathbox/MathBox.js/examples/ComplexExponentiation.html)
+* [Surface/plane intersection](http://acko.net/files/mathbox/MathBox.js/examples/Intersections.html)
+* [Curve on the projective line](http://acko.net/files/mathbox/MathBox.js/examples/ProjectiveLine.html)
+* [Warping cartesian into cylindrical coordinates](http://acko.net/files/mathbox/MathBox.js/examples/SurfaceWarp.html)
+* [Texture mapping a surface](http://acko.net/files/mathbox/MathBox.js/examples/TextureMap.html)
+* [Cross-eyed 3D](http://acko.net/files/mathbox/MathBox.js/examples/3D.html)
 
 Usage
 -----
