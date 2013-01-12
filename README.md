@@ -16,6 +16,8 @@ I've only tested thoroughly in Google Chrome, but Firefox seems to work well, wi
 Usage
 -----
 
+*Note: Don't miss the [included examples](https://github.com/unconed/MathBox.js/tree/master/examples).*
+
 MathBox requires its library of GLSL shaders to be included in the DOM. You can either paste in the included `MathBox.glsl.html`, or use the included ThreeBox preloader with your favorite onReady mechanism:
 
 ```javascript
