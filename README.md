@@ -216,7 +216,9 @@ mathbox.animate('#y-axis', { opacity: 0.5 });
 Viewports
 ---------
 
-Each mathbox scene has an associated viewport. This sets up a specific mathematical coordinate grid. The following viewports are available:
+Each mathbox scene has an associated viewport. This sets up a specific mathematical coordinate grid. Viewports support morphing between various coordinate grids in a mathematically correct way.
+
+The following viewport types are available:
 
 __Cartesian__  
 Regular linear XYZ.
@@ -305,8 +307,8 @@ Bezier Curve
   domain: [0, 1],                // Domain, expressed in interpolation space
   data: null,                    // Array of control points, each an array of 2 or 3 elements
   order: 3,                      // Order of bezier curve (1-3)
-  expression: function (x, i) {  // Live expression for data points. Return single value or array of 2/3 elements.
-    return 0;
+  expression: function (x, i) {  // Live expression for data points.
+    return 0;                    // Return single value or array of 2/3 elements.
   },
   points: false,                 // Whether to draw points
   line: true,                    // Whether to draw lines
@@ -320,8 +322,8 @@ Bezier Surface
   domain: [[0, 1], [0, 1]],            // X/Y Domain in interpolation space
   data: null,                          // Array of control points, each an array of 2 or 3 elements
   order: 3,                            // (unsupported, must be 3)
-  expression: function (x, y, i, j) {  // Live expression for data points. Return single value or array of 2/3 elements.
-    return 0;
+  expression: function (x, y, i, j) {  // Live expression for data points.
+    return 0;                          // Return single value or array of 2/3 elements.
   },
   points: false,                       // Whether to draw points
   line: false,                         // Whether to draw wireframe lines
@@ -338,8 +340,8 @@ Curve
   n: 64,                         // Number of points
   domain: [0, 1],                // Input domain
   data: null,                    // Array of data points, each an array of 2 or 3 elements
-  expression: function (x, i) {  // Live expression for data points. Return single value or array of 2/3 elements.
-    return 0;
+  expression: function (x, i) {  // Live expression for data points.
+    return 0;                    // Return single value or array of 2/3 elements.
   },
   points: false,                 // Whether to draw points
   line: true,                    // Whether to draw lines
@@ -364,8 +366,8 @@ Surface
   n: [ 64, 64 ],                         // Number of points in each direction
   domain: [[0, 1], [0, 1]],              // X/Y Input domain
   data: null,                            // Array of data points, each an array of 2 or 3 elements
-  expression: function (x, y, i, j) {    // Live expression for data points. Return single value or array of 2/3 elements.
-    return 0;
+  expression: function (x, y, i, j) {    // Live expression for data points.
+    return 0;                            // Return single value or array of 2/3 elements.
   },
   points: false,                         // Whether to draw points
   line: false,                           // Whether to draw wireframe lines
@@ -380,17 +382,14 @@ Vector
 ```javascript
 .vector({
   n: 1,                              // Number of vectors
-  data: null,                        // Array of start and end points, each an array of 2 or 3 elements
-  expression: function (i, end) {    // Live expression for start/end points. Return single value or array of 2/3 elements.
-    return 0;
+  data: null,                        // Array of alternating start and end points,
+                                     // each an array of 2 or 3 elements
+  expression: function (i, end) {    // Live expression for start/end points.
+    return 0;                        // Return single value or array of 2/3 elements.
   },
-  points: false,                     // Whether to draw points
-  line: false,                       // Whether to draw wireframe lines
-  mesh: true,                        // Whether to draw a solid mesh
-  doubleSided: true,                 // Whether the mesh is double sided
-  flipSided: false,                  // Whether to flip a single sided mesh
-  shaded: true,                      // Whether to shade the surface
-  size: .07,                         // Size of the arrow relative to the stage
+  line: true,                        // Whether to draw vector lines
+  arrow: true,                       // Whether to draw arrowheads
+  size: .07,                         // Size of the arrowhead relative to the stage
 })
 ```
 
