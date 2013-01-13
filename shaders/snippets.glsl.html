@@ -249,13 +249,31 @@ void projectToView(in vec3 positionIn, out vec4 positionOut, out vec3 viewPositi
   positionOut = projectionMatrix * worldPosition;
   positionOut.z -= zIndex * .00001;
 }
+</script>
 
+<script type="application/x-glsl" id="projectToViewNormal">
+// Vertex shader: project points to view (and apply zIndex bias).
+uniform float zIndex;
+varying vec3 vNormal;
+
+void projectToView(in vec3 positionIn, out vec4 positionOut, out vec3 viewPositionOut) {
+  vec4 worldPosition = modelViewMatrix * vec4(positionIn, 1.0);
+
+  vNormal = normalMatrix * normal;
+
+  viewPositionOut = -worldPosition.xyz;
+
+  positionOut = projectionMatrix * worldPosition;
+  positionOut.z -= zIndex * .00001;
+}
 </script>
 
 <script type="application/x-glsl" id="projectToViewDUDV">
 // Vertex shader: project points + DU/DV to view (and apply zIndex bias).
 uniform float zIndex;
 varying vec3 vNormal;
+
+attribute vec3 positionDV;
 
 void projectToView(in vec3 positionIn, in vec3 positionDUIn, in vec3 positionDVIn, out vec4 positionOut, out vec3 viewPositionOut) {
   vec4 worldPosition = modelViewMatrix * vec4(positionIn, 1.0);
@@ -286,7 +304,7 @@ attribute vec3 positionDU;
 attribute vec3 positionDV;
 
 // Vertex shader: read three.js vertex position attribute
-void getPosition(out vec3 positionOut, out vec3 positionDUOut, out vec3 positionDVOut) {
+void getPositionDUDV(out vec3 positionOut, out vec3 positionDUOut, out vec3 positionDVOut) {
   positionOut = position;
   positionDUOut = positionDU;
   positionDVOut = positionDV;

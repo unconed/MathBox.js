@@ -65,11 +65,13 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
       doubleSided: options.doubleSided,
       flipSided: options.flipSided,
       shaded: options.shaded,
+      smooth: true,
       dynamic: options.live,
     }, style);
     this.line = new MathBox.Renderable.Mesh(geometry, {
       type: 'mesh',
       shaded: options.shaded,
+      smooth: true,
       dynamic: options.live,
       wireframe: true
     }, style);
@@ -172,7 +174,7 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
 
           /* low quality */
           if (right == i) {
-            tangents[0][o].sub(v, vertices[left + j * stride], v).addSelf(v);
+            tangents[0][o].sub(v, vertices[left + j * stride]).addSelf(v);
           }
           else {
             tangents[0][o].copy(vertices[right + j * stride]);

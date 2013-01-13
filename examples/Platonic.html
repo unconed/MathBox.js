@@ -2,10 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>MathBox - Example: Intersection of 2D function in 3D.</title>
+  <title>MathBox - Example: Platonic solids.</title>
 
   <!--
-    This example shows intersecting surfaces creating implicit curves.
+    This example shows the platonic solid primitives included.
   -->
 
   <style type="text/css" media="screen">
@@ -87,67 +87,23 @@
         // Cartesian viewport
         .viewport({
           type: 'cartesian',
-          range: [[-1, 1], [-2, 5], [-1, 1]],
+          range: [[-1, 1], [-1, 1], [-1, 1]],
           scale: [1, 1, 1],
-          polar: 0,
         })
         .camera({
-          orbit: 4,
-          phi: τ/4-.5,
-          theta: .7,
+          orbit: 3.5,
+          phi: τ/6,
+          theta: 0.3,
         })
         .transition(300)
 
-        // Grid
-        .grid({
-          axis: [0, 2],
-          color: 0xa0a0a0,
-        })
-
-        // Surface function
-        .surface({
-          shaded: true,
-          domain: [[-1, 1], [-1, 1]],
-          n: [32, 32],
-          expression: surfaceFunc,
-          opacity: .999, // Bugfix: for some reason, tangent attribute is gone when material.transparent = false
-        })
-        .surface({
-          shaded: false,
-          domain: [[-1, 1], [-1, 1]],
-          n: [2, 2],
-          expression: sliceFunc,
-          color: 0x20C050,
-          opacity: .5,
+        // Axes
+        .platonic({
+          type: 'cube',
         });
 
     });
   });
-  </script>
-
-  <script type="text/javascript" charset="utf-8">
-  /**
-   * Custom helpers
-   */
-
-  // Clock that starts as soon as it is first called (per id).
-  var clocks = {};
-  window.clock = function (id) {
-    if (!clocks[id]) clocks[id] = +new Date();
-    return (+new Date() - clocks[id]) * .001;
-  }
-
-  // Arbitrary function
-  function surfaceFunc(x, y) {
-    return [x, 3 + -1 + Math.cos(x*5) + Math.cos(y*5), y];
-  }
-
-  // Horizontal slice
-  function sliceFunc(x, y) {
-    var t = clock(1);
-    return Math.sin(t) * .75 + 2;
-  }
-
   </script>
 
 </head>

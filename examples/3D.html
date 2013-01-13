@@ -8,7 +8,7 @@
     html, body { height: 100%; }
     body { margin: 0; padding: 0 }
     canvas { display: block }
-    
+
     .mathbox-label {
       font-family: 'klavika-web', sans-serif;
       font-weight: normal;
@@ -103,37 +103,8 @@
     });
   });
   </script>
-  
+
   <script type="text/javascript" charset="utf-8">
-
-  /**
-   * Custom helpers
-   */
-
-  // Clock that starts as soon as it is first called (per id).
-  var clocks = {};
-  window.clock = function (id) {
-    if (!clocks[id]) clocks[id] = +new Date();
-    return (+new Date() - clocks[id]) * .001;
-  }
-
-  // Arbitrary function
-  function surfaceFunc(x, y) {
-    return [x, 3 + -1 + Math.cos(x*5) + Math.cos(y*5), y];
-  }
-
-  // Horizontal slice
-  function sliceFunc(x, y) {
-    var t = clock(1);
-    return Math.sin(t) * .75 + 2;
-  }
-
-  // Wandering point
-  function wander(t, x, r) {
-    var u = r * (1 + .1 * (Math.cos(t*.31+x+Math.cos(t*.67-1))+Math.sin(t*1.32-x*3+Math.cos(t*.441))));
-    var v = t*.21+x+Math.cos(t*.57-2)+Math.sin(t*1.12-x*3+Math.cos(t*.541));
-    return [Math.cos(v)*u, Math.sin(v)*u];
-  }
 
   /**
    * Setup
@@ -835,19 +806,19 @@
       text-shadow: 0px 1px 0px rgba(0, 0, 0, .4);
 
       opacity: 0;
-      
+
       -webkit-transition: opacity 300ms ease-in-out;
       -moz-transition: opacity 300ms ease-in-out;
       transition: opacity 300ms ease-in-out;
     }
-    
+
     #info kbd {
       background: #ccc;
       box-shadow: 0px 1px 1px rgba(0, 0, 0, .3);
       border-radius: 3px;
       padding: 3px;
       margin: 3px;
-      
+
       font-family: inherit;
     }
   </style>

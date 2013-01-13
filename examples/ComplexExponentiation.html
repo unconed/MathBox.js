@@ -49,14 +49,14 @@
 
       opacity: 0;
     }
-    
+
     #info kbd {
       background: #ccc;
       box-shadow: 0px 1px 1px rgba(0, 0, 0, .3);
       border-radius: 3px;
       padding: 3px;
       margin: 3px;
-      
+
       font-family: inherit;
     }
   </style>
@@ -116,18 +116,11 @@
     });
   });
   </script>
-  
+
   <script type="text/javascript" charset="utf-8">
   /**
    * Custom helpers
    */
-
-  // Clock that starts as soon as it is first called (per id).
-  var clocks = {};
-  window.clock = function (id) {
-    if (!clocks[id]) clocks[id] = +new Date();
-    return (+new Date() - clocks[id]) * .001;
-  }
 
   // Complex exponentiation function, projected down to 3D
   function surfaceFunc(x, y) {
@@ -140,7 +133,6 @@
       x  + Math.sin(p) * y
     ];
   }
-
 
   </script>
 

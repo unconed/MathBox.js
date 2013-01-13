@@ -30,7 +30,7 @@ MathBox.Materials.prototype = {
 
       // Apply viewport transform
       if (!options.absolute) {
-        if (options.shaded) {
+        if (options.shaded && options.smooth) {
           // Viewport transform for position + DU/DV
           factory.group();
           this.viewport(factory);
@@ -58,7 +58,7 @@ MathBox.Materials.prototype = {
     options = options || {};
 
     // Default position snippet
-    var position = options.shaded ? 'getPositionDUDV' : 'getPosition';
+    var position = (options.shaded && options.smooth) ? 'getPositionDUDV' : 'getPosition';
 
     // Fetch vertex position from three.js attributes
     factory
@@ -66,7 +66,7 @@ MathBox.Materials.prototype = {
 
     // Apply math transform
     if (!options.absolute) {
-      if (options.shaded) {
+      if (options.shaded && options.smooth) {
         // Transform position + DU/DV offset positions
         factory
           .group()
@@ -103,8 +103,14 @@ MathBox.Materials.prototype = {
 
     // Transform point to view.
     if (options.shaded) {
-      factory
-        .snippet('projectToViewDUDV')
+      if (options.smooth) {
+        factory
+          .snippet('projectToViewDUDV')
+      }
+      else {
+        factory
+          .snippet('projectToViewNormal')
+      }
     }
     else {
       factory
@@ -119,7 +125,9 @@ MathBox.Materials.prototype = {
       // Add default fragment shader
       var fragment = {
         points: 'fragmentSolidPoint',
-        mesh: options.shaded ? 'fragmentShaded' : 'fragmentSolid',
+        mesh: options.shaded
+              ? 'fragmentShaded'
+              : 'fragmentSolid',
       }[options.type] || 'fragmentSolid';
 
       factory.material('vertexOutput', fragment);
