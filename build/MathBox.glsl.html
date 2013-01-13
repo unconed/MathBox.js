@@ -273,8 +273,6 @@ void projectToView(in vec3 positionIn, out vec4 positionOut, out vec3 viewPositi
 uniform float zIndex;
 varying vec3 vNormal;
 
-attribute vec3 positionDV;
-
 void projectToView(in vec3 positionIn, in vec3 positionDUIn, in vec3 positionDVIn, out vec4 positionOut, out vec3 viewPositionOut) {
   vec4 worldPosition = modelViewMatrix * vec4(positionIn, 1.0);
   vec4 worldPositionDU = modelViewMatrix * vec4(positionDUIn, 1.0);
