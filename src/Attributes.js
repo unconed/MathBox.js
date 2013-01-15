@@ -18,14 +18,14 @@ MathBox.Attributes.prototype = {
         attributes = this.__attributes,
         that = this;
 
-    function validate(key, value) {
+    var validate = function (key, value) {
       if (validators[key] === undefined) {
         var method = 'validate' + key.charAt(0).toUpperCase() + key.slice(1);
         validators[key] = that[method] || false;
       }
-      if (validators[key]) return validators[key](value);
+      if (validators[key]) return validators[key].call(this, value);
       return value;
-    }
+    }.bind(this);
 
     function set(key, value) {
       try {

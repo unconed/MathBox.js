@@ -68,20 +68,15 @@ MathBox.Animator.prototype = {
   },
 
   /**
-   * Hurry all animations on an object.
+   * Hurry all animations on an object by speeding by a factor.
    */
-  hurry: function (object, keys, limit) {
-    limit = limit || 300;
+  hurry: function (object, keys, factor) {
+    factor = factor || 4;
 
-    // Remove delays and cap duration per effect
+    // Reduce
     _.each(keys || object.__queue, function (queue, key) {
       _.each(object.__queue[key], function (op) {
-        if (op instanceof MathBox.Animator.Delay) {
-          op.duration = 0;
-        }
-        if (op instanceof MathBox.Animator.Animation) {
-          op.duration = Math.min(op.duration, limit);
-        }
+        op.hurry(factor);
       });
     }.bind(this));
   },
@@ -125,7 +120,7 @@ MathBox.Animator.prototype = {
 
       // Validate target value
       if (object.__validators[key]) {
-        value = object.__validators[key](value);
+        value = object.__validators[key].call(object, value);
       }
 
       // Queue new animation
@@ -223,6 +218,10 @@ MathBox.Animator.Delay.prototype = {
 
   skip: function () {
     this.duration = 0;
+  },
+
+  hurry: function (factor) {
+    this.duration -= (1 - this.fraction) * this.duration * (factor - 1);
   },
 
   extra: function () {
@@ -377,6 +376,10 @@ MathBox.Animator.Animation.prototype = {
 
     var value = process(from, to);
     this.object.set(this.key, value, true);
+  },
+
+  hurry: function (factor) {
+    this.duration -= (1 - this.fraction) * this.duration * (factor - 1);
   },
 
   skip: function () {

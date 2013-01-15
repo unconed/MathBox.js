@@ -15,18 +15,21 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       axis: 0,
       offset: [0, 0, 0],
       n: 2,
+      arrow: true,
+      line: true,
       labels: false,
+
       decimals: 2,
       distance: 15,
       ticks: 10,
       tickUnit: 1,
       tickScale: 10,
-      arrow: true,
       size: .07,
       style: {
         lineWidth: 4,
         color: new THREE.Color(0x707070),
       },
+      formatter: null,
       zero: true,
     };
   },
@@ -43,14 +46,19 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     var options = this.get(),
         axis = options.axis,
         offset = options.offset,
+
         arrow = options.arrow,
-        size = options.size,
+        line = options.line,
         labels = options.labels,
-        decimals = options.decimals,
+
+        n = options.n,
+        size = options.size,
+
         ticks = options.ticks,
         tickUnit = options.tickUnit,
         tickScale = options.tickScale,
-        n = options.n,
+        decimals = options.decimals,
+
         points = this.points,
         labelPoints = this.labelPoints,
         labelTangent = this.labelTangent,
@@ -77,6 +85,9 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       points[x].set.apply(points[x], p);
       points[x].addSelf(add);
     });
+
+    // Show/hide line
+    this.line.show(line);
 
     // Show/hide arrow
     this.arrow.show(arrow);
@@ -140,6 +151,8 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
         n = options.n,
         size = options.size,
         ticks = options.ticks,
+        distance = options.distance,
+        formatter = options.formatter,
         style = this.style,
         points = this.points = [], // Points for drawing lines
         labelPoints = this.labelPoints = [], // Points for attaching labels
@@ -162,15 +175,15 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
 
     // Prepare primitives
     var meshOptions = { dynamic: true, type: 'line' };
-    var arrowOptions = { dynamic: true, size: options.size, offset: .5 };
-    var tickOptions = { dynamic: true, size: options.size * .2 };
-    var labelOptions = { dynamic: true, distance: options.distance };
+    var arrowOptions = { dynamic: true, size: size, offset: .5 };
+    var tickOptions = { dynamic: true, size: size * .2 };
+    var labelOptions = { dynamic: true, distance: distance };
 
     // Scale label callback
     var callback = function (i) {
       var x = this.scale[i];
       if (x == 0 && !options.zero) return '';
-      return x;
+      return formatter ? formatter(x) : x;
     }.bind(this);
 
     // Line, arrowhead, tick marks and labels.

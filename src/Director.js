@@ -109,7 +109,7 @@ MathBox.Director.prototype = {
         if (animate) {
           animate = _.extend({}, animate);
           animate.delay = 0;
-          animate.duration = Math.min(300, animate.duration);
+          animate.duration = animate.duration / 2;
         }
       }
 
