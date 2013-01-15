@@ -43520,6 +43520,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
       // Change ID immediately
       if (options.id !== undefined) {
+        options = _.extend({}, options);
         original.id = options.id;
         delete options.id;
       }
@@ -43885,11 +43886,12 @@ MathBox.Materials.prototype = {
  *
  * @param min/max - Minimum and maximum of range
  * @param n - Desired number of ticks in range
- * @param scale - Multiplier for base steps of scale (e.g. 1 or π).
+ * @param unit - Base unit of scale (e.g. 1 or π).
+ * @param scale - Division scale (e.g. 2 = binary division, or 10 = decimal division).
  * @param inclusive - Whether to add ticks at the edges
  * @param bias - Integer to bias divisions one or more levels up or down (to create nested scales)
  */
-MathBox.Ticks = function (min, max, n, scale, inclusive, bias) {
+MathBox.Ticks = function (min, max, n, unit, scale, inclusive, bias) {
   // Desired
   n = n || 10;
   bias = bias || 0;
@@ -43898,13 +43900,13 @@ MathBox.Ticks = function (min, max, n, scale, inclusive, bias) {
   var span = max - min;
   var ideal = span / n;
 
-  // Round to the floor'd power of ten (or two, for pi-ticks).
-  scale = scale || 1;
-  var base = scale == π ? 2 : 10;
-  var ref = scale * (bias + Math.pow(base, Math.floor(Math.log(ideal / scale) / Math.log(base))));
+  // Round to the floor'd power of 'scale'
+  unit = unit || 1;
+  scale = scale || 10;
+  var ref = unit * (bias + Math.pow(scale, Math.floor(Math.log(ideal / unit) / Math.log(scale))));
 
   // Make derived steps at sensible factors.
-  var factors = base == π ? [1] : [5, 1, .5];
+  var factors = ((scale % 2) == 0) ? [scale / 2, 1, .5] : [1];
   var steps = _.map(factors, function (factor) { return ref * factor; });
 
   // Find step size closest to ideal.
@@ -44901,9 +44903,11 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       offset: [0, 0, 0],
       n: 2,
       labels: false,
+      decimals: 2,
       distance: 15,
       ticks: 10,
-      tickBase: 1,
+      tickUnit: 1,
+      tickScale: 10,
       arrow: true,
       size: .07,
       style: {
@@ -44929,8 +44933,10 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
         arrow = options.arrow,
         size = options.size,
         labels = options.labels,
+        decimals = options.decimals,
         ticks = options.ticks,
-        tickBase = options.tickBase,
+        tickUnit = options.tickUnit,
+        tickScale = options.tickScale,
         n = options.n,
         points = this.points,
         labelPoints = this.labelPoints,
@@ -44963,7 +44969,7 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     this.arrow.show(arrow);
 
     // Prepare scale divisions
-    var scale = this.scale = MathBox.Ticks(min, max, ticks, tickBase, true);
+    var scale = this.scale = MathBox.Ticks(min, max, ticks, tickUnit, tickScale, true);
 
     // Prepare tick marks range/scale.
     this.ticks.show(!!ticks);
@@ -45010,6 +45016,9 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     p[axis] = 1;
     labelTangent.set.apply(labelTangent, p);
     this.labels.show(!!labels);
+
+    // Label formatting
+    this.labels.set('decimals', decimals);
   },
 
   make: function () {
@@ -45088,7 +45097,8 @@ MathBox.Grid.prototype = _.extend(new MathBox.Primitive(null), {
       show: [ true, true ],
       n: 2,
       ticks: [ 10, 10 ],
-      tickBase: [ 1, 1 ],
+      tickUnit: [ 1, 1 ],
+      tickScale: [ 10, 10 ],
       style: {
         lineWidth: 1,
         color: new THREE.Color(0xA0A0A0)//,
@@ -45109,7 +45119,8 @@ MathBox.Grid.prototype = _.extend(new MathBox.Primitive(null), {
     var options = this.get(),
         axis = options.axis,
         ticks = options.ticks,
-        tickBase = options.tickBase,
+        tickUnit = options.tickUnit,
+        tickScale = options.tickScale,
         n = options.n,
         show = options.show,
         offset = options.offset,
@@ -45133,7 +45144,8 @@ MathBox.Grid.prototype = _.extend(new MathBox.Primitive(null), {
         max: range[1],
         inv: (range[1] - range[0]) / (n[i] - 1),
         ticks: ticks[i],
-        tickBase: tickBase[i]//,
+        tickUnit: tickUnit[i],
+        tickScale: tickScale[i],
       });
     });
 
@@ -45142,7 +45154,7 @@ MathBox.Grid.prototype = _.extend(new MathBox.Primitive(null), {
       var p = offset.slice(), i = 0;
 
       // Get ticks in main direction
-      var scale = MathBox.Ticks(a.min, a.max, a.ticks, a.tickBase, true);
+      var scale = MathBox.Ticks(a.min, a.max, a.ticks, a.tickUnit, a.tickScale, true);
 
       // Cap scale to available lines
       if (scale.length > limit) scale = scale.slice(0, limit);
@@ -45309,9 +45321,9 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         options = this.get(),
         data = options.data,
         arrow = options.arrow,
-        style = options.style,
         n = options.n,
-        size = options.size;
+        size = options.size,
+        scale = this.style.get('mathScale');
 
     // Find necessary foreshortening factors so line does not stick out through the arrowhead.
     var last = new THREE.Vector3(),
@@ -45343,7 +45355,8 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         last.copy(vertices[i-1]);
         viewport.to(current);
         viewport.to(last);
-        current.subSelf(last);
+        current.subSelf(last).multiplySelf(scale);
+
         var l = current.length();
 
         var clipped = Math.min(1, l * .5 / size);
@@ -45351,7 +45364,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
         // Foreshorten line
         var f = l - clipped;
-        current.normalize().multiplyScalar(f).addSelf(last);
+        current.normalize().multiplyScalar(f).divideSelf(scale).addSelf(last);
 
         // Transform back
         viewport.from(current);
@@ -46045,6 +46058,8 @@ MathBox.Renderable.ArrowHead = function (from, to, options, style) {
   MathBox.Renderable.call(this, options, style);
 };
 
+MathBox.Renderable.ArrowHead.geometry = new THREE.CylinderGeometry(.33, 0, 1, 16, 1);
+
 MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), {
 
   defaults: function () {
@@ -46069,7 +46084,7 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     this.normal = new THREE.Vector3(0, 0, 1);
 
     // Make cone mesh
-    var geometry = this.geometry = new THREE.CylinderGeometry(.33, 0, 1, 16, 1);
+    var geometry = this.geometry = MathBox.Renderable.ArrowHead.geometry;
     this.object = new THREE.Mesh(geometry, material);
 
     // Refresh material uniforms.
@@ -46297,6 +46312,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         callback = this.callback,
         anchor = this._anchor,
         distance = options.distance,
+        decimals = options.decimals,
         style = this.style;
 
     var mathjax = window.MathJax && MathJax.Hub;
@@ -46319,13 +46335,13 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         text = callback(i);
         if (text === undefined) text = '';
 
-        // Try to cast to number and round to 2 decimals
+        // Try to cast to number and round to n decimals
         if (+text == text) {
           var x = +text;
           if (x != 0) {
             var s = x < 0 ? -1 : 1;
             x = Math.abs(x);
-            var unit = Math.pow(10, 1 - Math.floor(Math.log(x)/Math.log(10)));
+            var unit = Math.pow(10, (decimals - 1) - Math.floor(Math.log(x)/Math.log(10)));
             x = s * Math.round(unit * x) / unit;
             text = x;
           }

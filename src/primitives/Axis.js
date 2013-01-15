@@ -16,9 +16,11 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
       offset: [0, 0, 0],
       n: 2,
       labels: false,
+      decimals: 2,
       distance: 15,
       ticks: 10,
-      tickBase: 1,
+      tickUnit: 1,
+      tickScale: 10,
       arrow: true,
       size: .07,
       style: {
@@ -44,8 +46,10 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
         arrow = options.arrow,
         size = options.size,
         labels = options.labels,
+        decimals = options.decimals,
         ticks = options.ticks,
-        tickBase = options.tickBase,
+        tickUnit = options.tickUnit,
+        tickScale = options.tickScale,
         n = options.n,
         points = this.points,
         labelPoints = this.labelPoints,
@@ -78,7 +82,7 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     this.arrow.show(arrow);
 
     // Prepare scale divisions
-    var scale = this.scale = MathBox.Ticks(min, max, ticks, tickBase, true);
+    var scale = this.scale = MathBox.Ticks(min, max, ticks, tickUnit, tickScale, true);
 
     // Prepare tick marks range/scale.
     this.ticks.show(!!ticks);
@@ -125,6 +129,9 @@ MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
     p[axis] = 1;
     labelTangent.set.apply(labelTangent, p);
     this.labels.show(!!labels);
+
+    // Label formatting
+    this.labels.set('decimals', decimals);
   },
 
   make: function () {

@@ -72,6 +72,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         callback = this.callback,
         anchor = this._anchor,
         distance = options.distance,
+        decimals = options.decimals,
         style = this.style;
 
     var mathjax = window.MathJax && MathJax.Hub;
@@ -94,13 +95,13 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         text = callback(i);
         if (text === undefined) text = '';
 
-        // Try to cast to number and round to 2 decimals
+        // Try to cast to number and round to n decimals
         if (+text == text) {
           var x = +text;
           if (x != 0) {
             var s = x < 0 ? -1 : 1;
             x = Math.abs(x);
-            var unit = Math.pow(10, 1 - Math.floor(Math.log(x)/Math.log(10)));
+            var unit = Math.pow(10, (decimals - 1) - Math.floor(Math.log(x)/Math.log(10)));
             x = s * Math.round(unit * x) / unit;
             text = x;
           }

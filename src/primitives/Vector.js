@@ -96,9 +96,9 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         options = this.get(),
         data = options.data,
         arrow = options.arrow,
-        style = options.style,
         n = options.n,
-        size = options.size;
+        size = options.size,
+        scale = this.style.get('mathScale');
 
     // Find necessary foreshortening factors so line does not stick out through the arrowhead.
     var last = new THREE.Vector3(),
@@ -130,7 +130,8 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         last.copy(vertices[i-1]);
         viewport.to(current);
         viewport.to(last);
-        current.subSelf(last);
+        current.subSelf(last).multiplySelf(scale);
+
         var l = current.length();
 
         var clipped = Math.min(1, l * .5 / size);
@@ -138,7 +139,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
         // Foreshorten line
         var f = l - clipped;
-        current.normalize().multiplyScalar(f).addSelf(last);
+        current.normalize().multiplyScalar(f).divideSelf(scale).addSelf(last);
 
         // Transform back
         viewport.from(current);

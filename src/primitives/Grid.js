@@ -17,7 +17,8 @@ MathBox.Grid.prototype = _.extend(new MathBox.Primitive(null), {
       show: [ true, true ],
       n: 2,
       ticks: [ 10, 10 ],
-      tickBase: [ 1, 1 ],
+      tickUnit: [ 1, 1 ],
+      tickScale: [ 10, 10 ],
       style: {
         lineWidth: 1,
         color: new THREE.Color(0xA0A0A0)//,
@@ -38,7 +39,8 @@ MathBox.Grid.prototype = _.extend(new MathBox.Primitive(null), {
     var options = this.get(),
         axis = options.axis,
         ticks = options.ticks,
-        tickBase = options.tickBase,
+        tickUnit = options.tickUnit,
+        tickScale = options.tickScale,
         n = options.n,
         show = options.show,
         offset = options.offset,
@@ -62,7 +64,8 @@ MathBox.Grid.prototype = _.extend(new MathBox.Primitive(null), {
         max: range[1],
         inv: (range[1] - range[0]) / (n[i] - 1),
         ticks: ticks[i],
-        tickBase: tickBase[i]//,
+        tickUnit: tickUnit[i],
+        tickScale: tickScale[i],
       });
     });
 
@@ -71,7 +74,7 @@ MathBox.Grid.prototype = _.extend(new MathBox.Primitive(null), {
       var p = offset.slice(), i = 0;
 
       // Get ticks in main direction
-      var scale = MathBox.Ticks(a.min, a.max, a.ticks, a.tickBase, true);
+      var scale = MathBox.Ticks(a.min, a.max, a.ticks, a.tickUnit, a.tickScale, true);
 
       // Cap scale to available lines
       if (scale.length > limit) scale = scale.slice(0, limit);

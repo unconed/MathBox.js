@@ -3,11 +3,12 @@
  *
  * @param min/max - Minimum and maximum of range
  * @param n - Desired number of ticks in range
- * @param scale - Multiplier for base steps of scale (e.g. 1 or π).
+ * @param unit - Base unit of scale (e.g. 1 or π).
+ * @param scale - Division scale (e.g. 2 = binary division, or 10 = decimal division).
  * @param inclusive - Whether to add ticks at the edges
  * @param bias - Integer to bias divisions one or more levels up or down (to create nested scales)
  */
-MathBox.Ticks = function (min, max, n, scale, inclusive, bias) {
+MathBox.Ticks = function (min, max, n, unit, scale, inclusive, bias) {
   // Desired
   n = n || 10;
   bias = bias || 0;
@@ -16,13 +17,13 @@ MathBox.Ticks = function (min, max, n, scale, inclusive, bias) {
   var span = max - min;
   var ideal = span / n;
 
-  // Round to the floor'd power of ten (or two, for pi-ticks).
-  scale = scale || 1;
-  var base = scale == π ? 2 : 10;
-  var ref = scale * (bias + Math.pow(base, Math.floor(Math.log(ideal / scale) / Math.log(base))));
+  // Round to the floor'd power of 'scale'
+  unit = unit || 1;
+  scale = scale || 10;
+  var ref = unit * (bias + Math.pow(scale, Math.floor(Math.log(ideal / unit) / Math.log(scale))));
 
   // Make derived steps at sensible factors.
-  var factors = base == π ? [1] : [5, 1, .5];
+  var factors = ((scale % 2) == 0) ? [scale / 2, 1, .5] : [1];
   var steps = _.map(factors, function (factor) { return ref * factor; });
 
   // Find step size closest to ideal.

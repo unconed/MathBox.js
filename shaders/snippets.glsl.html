@@ -356,11 +356,17 @@ void fragmentShaded() {
 
 	vec3 halfVector = normalize(lightVector + viewPosition);
 	float dotNormalHalf = max(dot(normal, halfVector), 0.0);
-	float specular = max(pow(dotNormalHalf, shininess), 0.0);
+	float specular = pow(max(dotNormalHalf, 0.0), shininess);
 
   vec4 sample = texture2D(texture, vUV);
-  vec3 textured = color + (color * sample.xyz - color) * mapOpacity * sample.w;
-  gl_FragColor = vec4(textured * diffuse + specular * .3, opacity);
+  vec3 sampleLinear = sample.xyz * sample.xyz;
+  vec3 colorLinear = color * color;
+
+  // don't gamma correct specular color
+  vec3 specColor = normalize(.1 + sqrt(color)) * .35 * specular;
+
+  vec3 textured = colorLinear + (colorLinear * sampleLinear.xyz - colorLinear) * mapOpacity * sample.w;
+  gl_FragColor = vec4(sqrt(max(vec3(0.0, 0.0, 0.0), textured * diffuse + specColor)), opacity);
 }
 </script>
 

@@ -8,6 +8,8 @@ MathBox.Renderable.ArrowHead = function (from, to, options, style) {
   MathBox.Renderable.call(this, options, style);
 };
 
+MathBox.Renderable.ArrowHead.geometry = new THREE.CylinderGeometry(.33, 0, 1, 16, 1);
+
 MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), {
 
   defaults: function () {
@@ -32,7 +34,7 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     this.normal = new THREE.Vector3(0, 0, 1);
 
     // Make cone mesh
-    var geometry = this.geometry = new THREE.CylinderGeometry(.33, 0, 1, 16, 1);
+    var geometry = this.geometry = MathBox.Renderable.ArrowHead.geometry;
     this.object = new THREE.Mesh(geometry, material);
 
     // Refresh material uniforms.

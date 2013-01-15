@@ -418,6 +418,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
       // Change ID immediately
       if (options.id !== undefined) {
+        options = _.extend({}, options);
         original.id = options.id;
         delete options.id;
       }

@@ -307,7 +307,8 @@ Axis
   offset: [0, 0, 0], // Shift axis position
   n: 2,              // Number of points on axis line (set to higher for curved viewports)
   ticks: 10,         // Approximate number of ticks on axis (ticks are spaced at sensible units).
-  tickBase: 1,       // Base unit for ticks. Set to π e.g. to space ticks at multiples of π.
+  tickUnit: 1,       // Base unit for ticks. Set to π e.g. to space ticks at multiples of π.
+  tickScale: 10,     // Integer denoting the base for recursive division. 2 = binary, 10 = decimal
   arrow: true,       // Whether to include an arrow on the axis
   size: .07,         // Size of the arrow relative to the stage
 });
@@ -369,7 +370,8 @@ Grid
   show: [ true, true ],   // Show horizontal and vertical direction
   n: 2,                   // Number of points on grid line (set to higher for curved viewports)
   ticks: [ 10, 10 ],      // Approximate number of ticks on axis (ticks are spaced at sensible units).
-  tickBase: [ 1, 1 ],     // Base unit for ticks. Set to π e.g. to space ticks at multiples of π.
+  tickUnit: [ 1, 1],      // Base unit for ticks on each axis. Set to π e.g. to space ticks at multiples of π.
+  tickScale: [ 10, 10 ],  // Integer denoting the base for recursive division on each axis. 2 = binary, 10 = decimal
 });
 ```
 
