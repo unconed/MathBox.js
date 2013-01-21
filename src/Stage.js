@@ -152,7 +152,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
       // Allow for removal via selector
       if (typeof object == 'string') {
-        _.each(this.select(object), function (object) {
+        return _.each(this.select(object), function (object) {
           this.remove(object, animate);
         }.bind(this));
       }

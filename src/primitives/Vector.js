@@ -56,6 +56,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
   make: function () {
     var that = this,
         options = this.get(),
+        arrow = options.arrow,
         style = this.style,
         n = options.n;
 
@@ -68,7 +69,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     var arrowOptions = { size: options.size };
 
     // Allocate vertices for line segments.
-    // Allocate arrowheads.
+    // Allocate arrowheads if arrows requested.
     var i = 0;
     _.loop(n, function () {
       vertices.push(new THREE.Vector3());
@@ -76,9 +77,11 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
       points.push(new THREE.Vector3());
       points.push(new THREE.Vector3());
 
-      var arrowhead = new MathBox.Renderable.ArrowHead(points[i++], points[i++], arrowOptions, style);
-      render.push(arrowhead);
-      arrows.push(arrowhead);
+      if (arrow) { // arrows are expensive for now, only allocate if requested on creation
+        var arrowhead = new MathBox.Renderable.ArrowHead(points[i++], points[i++], arrowOptions, style);
+        render.push(arrowhead);
+        arrows.push(arrowhead);
+      }
     });
 
     this.line = new MathBox.Renderable.Mesh(vertices, lineOptions, style);

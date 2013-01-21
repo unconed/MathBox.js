@@ -12,7 +12,7 @@ MathBox.Style.prototype = {
 
   defaults: function () {
     return {
-      color: new THREE.Color(0x3070F0),
+      color: new THREE.Color(0x3090F0),
       opacity: 1,
       lineWidth: 2,
       pointSize: 5,
