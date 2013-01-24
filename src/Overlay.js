@@ -154,11 +154,12 @@ MathBox.Overlay.prototype = {
       camera.matrixWorldInverse.multiplyVector3(q);
 
       // Find difference and scale it
+      var sign = object.distance > 0 ? 1 : -1;
       q.subSelf(v);
       q.z = 0;
       q.normalize().multiplyScalar(object.distance);
-      x += Math.abs(q.y);
-      y += Math.abs(q.x);
+      x += Math.abs(q.y) * sign;
+      y += Math.abs(q.x) * sign;
     }
 
     // Round to avoid pixel fuzzyness

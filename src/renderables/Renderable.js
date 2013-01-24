@@ -21,8 +21,8 @@ MathBox.Renderable = function (options, style) {
 
   // Update on style/uniforms change
   this.style = style || new MathBox.Style();
-  this.style.on('change', this.styleCallback = this.refresh.bind(this));
-  this.on('change', this.uniformsCallback = this.refresh.bind(this));
+  this.style.on('change', this.styleCallback = this.refreshStyle.bind(this));
+  this.on('change', this.uniformsCallback = this.refreshOptions.bind(this));
 
   // Combined user-defined math-space transform
   this.mathTransform = new THREE.Matrix4();
@@ -42,8 +42,11 @@ MathBox.Renderable.prototype = {
   },
 
   show: function (show) {
-    this.visible = (show === undefined ? true : !!show);
-    this.refresh();
+    var change = (show === undefined ? true : !!show);
+    if (change != this.visible) {
+      this.visible = change;
+      this.refresh();
+    }
   },
 
   composeTransform: function (position, rotation, scale) {
@@ -63,40 +66,60 @@ MathBox.Renderable.prototype = {
 		te[14] = position.z;
   },
 
-  refresh: function () {
-    var options;
+  refreshStyle: function (changed) {
     var style = this.style.get();
+    changed = changed || style;
+
+    if (this.material) {
+      this.material.applyUniforms(changed);
+    }
 
     if (this.object) {
       // No point in culling if everything is dynamic / GLSL based
       this.object.frustumCulled = false;
 
       // Apply user-defined world transforms through three.js modelView matrix.
-      this.object.position = style.worldPosition;
-      this.object.rotation = style.worldRotation;
-      this.object.scale = style.worldScale;
+      if (changed.worldPosition) this.object.position = style.worldPosition;
+      if (changed.worldRotation) this.object.rotation = style.worldRotation;
+      if (changed.worldScale) this.object.scale = style.worldScale;
 
       // Prepare combined mathTransform matrix
-      this.composeTransform(style.mathPosition, style.mathRotation, style.mathScale);
+      if (changed.mathPosition || changed.mathRotation || changed.mathScale) {
+        this.composeTransform(style.mathPosition, style.mathRotation, style.mathScale);
+
+        if (this.material) {
+          this.material.applyUniforms({ mathTransform: this.mathTransform });
+        }
+      }
 
       // Set visibility
-      this.object.visible = this.visible && (style.opacity > 0);
+      if (changed.opacity !== undefined) {
+        this.object.visible = this.visible && (style.opacity > 0);
+      }
+
+      // Set zIndex
+      if ((changed.opacity !== undefined || changed.zIndex !== undefined) && this.material) {
+        // Transparent objects are drawn back to front
+        var sign = (style.opacity < 1) ? -1 : 1;
+        this.object.renderDepth = style.zIndex * sign;
+      }
     }
+  },
+
+  refreshOptions: function (changed) {
+    var options = this.get();
+    changed = changed || options;
 
     if (this.material) {
       options = this.get();
 
-      // Set double sided / culling order.
-      this.material.side = options.doubleSided ? THREE.DoubleSide :
-                           THREE.FrontSide;
-      options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };
-      this.material.applyUniforms(options);
-
-      // Apply style uniforms
-      this.material.applyUniforms(style);
-
-      // Apply mathTransform
-      this.material.applyUniforms({ mathTransform: this.mathTransform });
+      if (changed.doubleSided !== undefined || changed.flipSided !== undefined) {
+        // Set double sided / culling order.
+        this.material.side = options.doubleSided ? THREE.DoubleSide :
+                             THREE.FrontSide;
+        options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };
+        this.material.applyUniforms(options);
+      }
 
       // Apply custom uniforms
       options = this.get().uniforms;
@@ -112,9 +135,14 @@ MathBox.Renderable.prototype = {
     }
   },
 
+  refresh: function () {
+    this.refreshStyle();
+    this.refreshOptions();
+  },
+
   adjust: function (viewport) {
     if (this.material) {
-      this.material.applyUniforms(viewport.uniforms());
+       this.material.applyUniforms(viewport.uniforms());
     }
   }//,
 

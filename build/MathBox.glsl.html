@@ -328,6 +328,7 @@ void vertexOutput(in vec4 position, in vec3 viewPosition) {
 // Fragment shader: render a shaded surface fragment.
 uniform vec3 color;
 uniform float opacity;
+uniform float mapColor;
 uniform float mapOpacity;
 
 uniform sampler2D texture;
@@ -359,14 +360,19 @@ void fragmentShaded() {
 	float specular = pow(max(dotNormalHalf, 0.0), shininess);
 
   vec4 sample = texture2D(texture, vUV);
+
+  float alpha = opacity * (1.0 - mapOpacity * (1.0 - sample.w));
+  if (alpha < 0.01) discard;
+
   vec3 sampleLinear = sample.xyz * sample.xyz;
   vec3 colorLinear = color * color;
 
   // don't gamma correct specular color
   vec3 specColor = normalize(.1 + sqrt(color)) * .35 * specular;
 
-  vec3 textured = colorLinear + (colorLinear * sampleLinear.xyz - colorLinear) * mapOpacity * sample.w;
-  gl_FragColor = vec4(sqrt(max(vec3(0.0, 0.0, 0.0), textured * diffuse + specColor)), opacity);
+  vec3 textured = colorLinear + (colorLinear * sampleLinear.xyz - colorLinear) * mapColor;
+
+  gl_FragColor = vec4(sqrt(max(vec3(0.0, 0.0, 0.0), textured * diffuse + specColor)), alpha);
 }
 </script>
 
@@ -374,6 +380,7 @@ void fragmentShaded() {
 // Fragment shader: render a solid surface fragment.
 uniform vec3 color;
 uniform float opacity;
+uniform float mapColor;
 uniform float mapOpacity;
 
 uniform sampler2D texture;
@@ -383,8 +390,12 @@ void fragmentSolid() {
   if (opacity < 0.01) discard;
 
   vec4 sample = texture2D(texture, vUV);
-  vec3 textured = color + (color * sample.xyz - color) * mapOpacity * sample.w;
-  gl_FragColor = vec4(textured, opacity);
+  float alpha = opacity * (1.0 - mapOpacity * (1.0 - sample.w));
+  if (alpha < 0.01) discard;
+
+  vec3 textured = color + (color * sample.xyz - color) * mapColor;
+
+  gl_FragColor = vec4(textured, alpha);
 }
 </script>
 

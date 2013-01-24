@@ -665,7 +665,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
       // Allow for removal via selector
       if (typeof object == 'string') {
-        _.each(this.select(object), function (object) {
+        return _.each(this.select(object), function (object) {
           this.remove(object, animate);
         }.bind(this));
       }
@@ -1691,7 +1691,7 @@ MathBox.Style.prototype = {
 
   defaults: function () {
     return {
-      color: new THREE.Color(0x3070F0),
+      color: new THREE.Color(0x3080F0),
       opacity: 1,
       lineWidth: 2,
       pointSize: 5,
@@ -1706,6 +1706,7 @@ MathBox.Style.prototype = {
       zIndex: 0.0,
 
       map: null,
+      mapColor: 0,
       mapOpacity: 0,
     };
   },
@@ -1987,11 +1988,12 @@ MathBox.Overlay.prototype = {
       camera.matrixWorldInverse.multiplyVector3(q);
 
       // Find difference and scale it
+      var sign = object.distance > 0 ? 1 : -1;
       q.subSelf(v);
       q.z = 0;
       q.normalize().multiplyScalar(object.distance);
-      x += Math.abs(q.y);
-      y += Math.abs(q.x);
+      x += Math.abs(q.y) * sign;
+      y += Math.abs(q.x) * sign;
     }
 
     // Round to avoid pixel fuzzyness
@@ -2705,6 +2707,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
   make: function () {
     var that = this,
         options = this.get(),
+        arrow = options.arrow,
         style = this.style,
         n = options.n;
 
@@ -2717,7 +2720,7 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
     var arrowOptions = { size: options.size };
 
     // Allocate vertices for line segments.
-    // Allocate arrowheads.
+    // Allocate arrowheads if arrows requested.
     var i = 0;
     _.loop(n, function () {
       vertices.push(new THREE.Vector3());
@@ -2725,9 +2728,11 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
       points.push(new THREE.Vector3());
       points.push(new THREE.Vector3());
 
-      var arrowhead = new MathBox.Renderable.ArrowHead(points[i++], points[i++], arrowOptions, style);
-      render.push(arrowhead);
-      arrows.push(arrowhead);
+      if (arrow) { // arrows are expensive for now, only allocate if requested on creation
+        var arrowhead = new MathBox.Renderable.ArrowHead(points[i++], points[i++], arrowOptions, style);
+        render.push(arrowhead);
+        arrows.push(arrowhead);
+      }
     });
 
     this.line = new MathBox.Renderable.Mesh(vertices, lineOptions, style);
@@ -3296,8 +3301,8 @@ MathBox.Renderable = function (options, style) {
 
   // Update on style/uniforms change
   this.style = style || new MathBox.Style();
-  this.style.on('change', this.styleCallback = this.refresh.bind(this));
-  this.on('change', this.uniformsCallback = this.refresh.bind(this));
+  this.style.on('change', this.styleCallback = this.refreshStyle.bind(this));
+  this.on('change', this.uniformsCallback = this.refreshOptions.bind(this));
 
   // Combined user-defined math-space transform
   this.mathTransform = new THREE.Matrix4();
@@ -3317,8 +3322,11 @@ MathBox.Renderable.prototype = {
   },
 
   show: function (show) {
-    this.visible = (show === undefined ? true : !!show);
-    this.refresh();
+    var change = (show === undefined ? true : !!show);
+    if (change != this.visible) {
+      this.visible = change;
+      this.refresh();
+    }
   },
 
   composeTransform: function (position, rotation, scale) {
@@ -3338,40 +3346,60 @@ MathBox.Renderable.prototype = {
 		te[14] = position.z;
   },
 
-  refresh: function () {
-    var options;
+  refreshStyle: function (changed) {
     var style = this.style.get();
+    changed = changed || style;
+
+    if (this.material) {
+      this.material.applyUniforms(changed);
+    }
 
     if (this.object) {
       // No point in culling if everything is dynamic / GLSL based
       this.object.frustumCulled = false;
 
       // Apply user-defined world transforms through three.js modelView matrix.
-      this.object.position = style.worldPosition;
-      this.object.rotation = style.worldRotation;
-      this.object.scale = style.worldScale;
+      if (changed.worldPosition) this.object.position = style.worldPosition;
+      if (changed.worldRotation) this.object.rotation = style.worldRotation;
+      if (changed.worldScale) this.object.scale = style.worldScale;
 
       // Prepare combined mathTransform matrix
-      this.composeTransform(style.mathPosition, style.mathRotation, style.mathScale);
+      if (changed.mathPosition || changed.mathRotation || changed.mathScale) {
+        this.composeTransform(style.mathPosition, style.mathRotation, style.mathScale);
+
+        if (this.material) {
+          this.material.applyUniforms({ mathTransform: this.mathTransform });
+        }
+      }
 
       // Set visibility
-      this.object.visible = this.visible && (style.opacity > 0);
+      if (changed.opacity !== undefined) {
+        this.object.visible = this.visible && (style.opacity > 0);
+      }
+
+      // Set zIndex
+      if ((changed.opacity !== undefined || changed.zIndex !== undefined) && this.material) {
+        // Transparent objects are drawn back to front
+        var sign = (style.opacity < 1) ? -1 : 1;
+        this.object.renderDepth = style.zIndex * sign;
+      }
     }
+  },
+
+  refreshOptions: function (changed) {
+    var options = this.get();
+    changed = changed || options;
 
     if (this.material) {
       options = this.get();
 
-      // Set double sided / culling order.
-      this.material.side = options.doubleSided ? THREE.DoubleSide :
-                           THREE.FrontSide;
-      options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };
-      this.material.applyUniforms(options);
-
-      // Apply style uniforms
-      this.material.applyUniforms(style);
-
-      // Apply mathTransform
-      this.material.applyUniforms({ mathTransform: this.mathTransform });
+      if (changed.doubleSided !== undefined || changed.flipSided !== undefined) {
+        // Set double sided / culling order.
+        this.material.side = options.doubleSided ? THREE.DoubleSide :
+                             THREE.FrontSide;
+        options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };
+        this.material.applyUniforms(options);
+      }
 
       // Apply custom uniforms
       options = this.get().uniforms;
@@ -3387,9 +3415,14 @@ MathBox.Renderable.prototype = {
     }
   },
 
+  refresh: function () {
+    this.refreshStyle();
+    this.refreshOptions();
+  },
+
   adjust: function (viewport) {
     if (this.material) {
-      this.material.applyUniforms(viewport.uniforms());
+       this.material.applyUniforms(viewport.uniforms());
     }
   }//,
 

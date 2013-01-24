@@ -199,7 +199,8 @@ lineWidth: 2,    // Line width for curves and wireframes
 pointSize: 5,    // Point size for point rendering
 
 map: null,       // Texture Map (pass in THREE.Texture)
-mapOpacity: 0,   // Opacity of texture map
+mapColor: 0,     // Strength of texture map color (0 - 1)
+mapOpacity: 0,   // Strength of texture map mask (0 - 1)
 
 mathScale: [1, 1, 1],    // Scale transform in math-space
 mathRotation: [0, 0, 0], // Euler-angle rotation in math-space
@@ -218,6 +219,8 @@ Styles are grouped under a separate `style` property for each primitive, e.g.
 ```javascript
 mathbox.get('#x-axis').style.color
 ```
+
+Note however that styles are converted into and stored as Three.js objects, such as `THREE.Color` and `THREE.Vector3`. You can pass these back into MathBox, in fact, the array-based notation for the styles above is just a convenient shorthand.
 
 However, when using `mathbox.set()` and `mathbox.animate()`, you can omit the `style` key and pass in a flat object mixing both styles and options:
 
