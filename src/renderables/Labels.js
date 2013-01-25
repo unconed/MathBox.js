@@ -73,12 +73,16 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         anchor = this._anchor,
         distance = options.distance,
         decimals = options.decimals,
-        style = this.style;
+        style = this.style,
+        opacity = style.get('opacity');
 
     var mathjax = window.MathJax && MathJax.Hub;
 
+    var ilog10 = 1/Math.log(10);
+
     // Update labels
     _.each(sprites, function (sprite, i) {
+
       // Transform anchor point
       sprite.position.copy(points[i]);
       viewport.to(sprite.position);
@@ -86,7 +90,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
       sprite.distance = options.distance;
 
       // Set opacity
-      sprite.element.style.opacity = style.get('opacity');
+      sprite.opacity = opacity;
 
       // Set content
       var text = '';
@@ -101,7 +105,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
           if (x != 0) {
             var s = x < 0 ? -1 : 1;
             x = Math.abs(x);
-            var unit = Math.pow(10, (decimals - 1) - Math.floor(Math.log(x)/Math.log(10)));
+            var unit = Math.pow(10, (decimals - 1) - Math.floor(Math.log(x) * ilog10));
             x = s * Math.round(unit * x) / unit;
             text = x;
           }

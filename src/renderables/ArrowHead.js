@@ -41,6 +41,10 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     this.refresh();
   },
 
+  isVisible: function () {
+    return this.visible && (this.style.get('opacity') > 0);
+  },
+
   adjust: function (viewport) {
     var options = this.get();
     var offset = options.offset;

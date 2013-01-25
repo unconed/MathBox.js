@@ -46,8 +46,9 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
   adjust: function (viewport) {
     var options = this.get();
-    // Bug: Vector foreshortening requires live to be always-on
-    (true || options.live) && this.calculate(viewport);
+
+    // Vector foreshortening requires live to be always-on
+    (options.arrow || options.live) && this.calculate(viewport);
     _.each(this.arrows, function (arrow) {
       arrow.show(options.arrow);
     });

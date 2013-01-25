@@ -90,7 +90,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       var renderables = primitive.renderables();
       _.each(renderables, function (renderable) {
         // Adjust visible renderables to viewport
-        renderable.object && renderable.adjust(viewport, camera, width, height, this);
+        renderable.isVisible() && renderable.adjust(viewport, camera, width, height, this);
       }.bind(this));
     }.bind(this));
 
@@ -416,13 +416,19 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       // Reset creation ID of clone
       delete original.sequence;
 
-      // Change ID immediately
-      if (options.id !== undefined) {
-        options = _.extend({}, options);
-        original.id = options.id;
-        delete options.id;
-      }
-      else {
+      // Sort options into animatable and non-animatable
+      options = _.extend({}, options);
+      var remove = [];
+      _.each(options, function (value, key) {
+        if (key == 'id' || typeof value == 'boolean' || value === null) {
+          original[key] = options[key];
+          remove.push(key);
+        }
+      });
+      _.each(remove, function (key) { delete options[key] });
+
+      // Force ID change
+      if (original.id == primitive.get('id')) {
         original.id = (original.id || '') + '-clone';
       }
 

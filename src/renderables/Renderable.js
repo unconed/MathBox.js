@@ -49,6 +49,10 @@ MathBox.Renderable.prototype = {
     }
   },
 
+  isVisible: function () {
+    return this.object && this.object.visible;
+  },
+
   composeTransform: function (position, rotation, scale) {
 		var mRotation = THREE.Matrix4.__m1;
 		var mScale = THREE.Matrix4.__m2;
@@ -99,8 +103,10 @@ MathBox.Renderable.prototype = {
 
       // Set zIndex
       if ((changed.opacity !== undefined || changed.zIndex !== undefined) && this.material) {
+        // Solid objects are drawn front to back
         // Transparent objects are drawn back to front
-        var sign = (style.opacity < 1) ? -1 : 1;
+        // Always make sure positive zIndex makes it draw on top of everything else
+        var sign = (style.opacity < 1) ? 1 : -1;
         this.object.renderDepth = style.zIndex * sign;
       }
     }

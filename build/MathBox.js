@@ -400,25 +400,28 @@ ThreeBox.OrbitControls.prototype = {
   start: function () {
     var that = this;
 
-    this._mouseDown = (function (event) {
-      this.drag = true;
-      this.lastHover = this.origin = { x: event.pageX, y: event.pageY };
+    this._mouseDown = function (event) {
+      that.width = that.element && that.element.offsetWidth,
+      that.height = that.element && that.element.offsetHeight;
+
+      that.drag = true;
+      that.lastHover = that.origin = { x: event.pageX, y: event.pageY };
 
       event.preventDefault();
-    }).bind(this);
+    };
 
-    this._mouseUp = (function () {
-      this.drag = false;
-    }).bind(this);
+    this._mouseUp = function () {
+      that.drag = false;
+    };
 
-    this._mouseMove = (function (event) {
+    this._mouseMove = function (event) {
       if (that.drag) {
         var relative = { x: event.pageX - that.origin.x, y: event.pageY - that.origin.y },
             delta = { x: event.pageX - that.lastHover.x, y: event.pageY - that.lastHover.y };
         that.lastHover = { x: event.pageX, y: event.pageY };
         that.moved(that.origin, relative, delta);
       }
-    }).bind(this);
+    };
 
     if (this.element) {
       this.element.addEventListener('mousedown', this._mouseDown, false);
@@ -3574,7 +3577,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       var renderables = primitive.renderables();
       _.each(renderables, function (renderable) {
         // Adjust visible renderables to viewport
-        renderable.object && renderable.adjust(viewport, camera, width, height, this);
+        renderable.isVisible() && renderable.adjust(viewport, camera, width, height, this);
       }.bind(this));
     }.bind(this));
 
@@ -3900,13 +3903,19 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       // Reset creation ID of clone
       delete original.sequence;
 
-      // Change ID immediately
-      if (options.id !== undefined) {
-        options = _.extend({}, options);
-        original.id = options.id;
-        delete options.id;
-      }
-      else {
+      // Sort options into animatable and non-animatable
+      options = _.extend({}, options);
+      var remove = [];
+      _.each(options, function (value, key) {
+        if (key == 'id' || typeof value == 'boolean' || value === null) {
+          original[key] = options[key];
+          remove.push(key);
+        }
+      });
+      _.each(remove, function (key) { delete options[key] });
+
+      // Force ID change
+      if (original.id == primitive.get('id')) {
         original.id = (original.id || '') + '-clone';
       }
 
@@ -4858,6 +4867,7 @@ MathBox.Overlay.prototype = {
   update: function (camera) {
 		this.fov = 0.5 / Math.tan( camera.fov * Math.PI / 360 ) * this.height;
 
+    window.ii = 0;
     // Iterate over individual objects for update
     _.each(this.sprites, function (sprite) {
       this._update(sprite, camera);
@@ -4933,10 +4943,12 @@ MathBox.Overlay.prototype = {
       visible = visible && parent.visible;
       parent = parent.parent;
     }
-    object.render = visible;
+    object.render = visible && (object.opacity > 0);
 
     if (!object.render) {
-      object.element.style.display = 'none';
+      if (render || render === null) {
+        object.element.style.display = 'none';
+      }
       return;
     }
     else if (!render) {
@@ -4972,13 +4984,19 @@ MathBox.Overlay.prototype = {
     y = Math.round(y);
 
     // Set position
-    if (object.left != x) {
+    if (object.left !== x) {
       object.left = x;
       object.element.style.left = x + 'px';
     }
-    if (object.top != y) {
+    if (object.top !== y) {
       object.top = y;
       object.element.style.top  = y + 'px';
+    }
+
+    // Set opacity
+    if (object.lastOpacity !== object.opacity) {
+      object.element.style.opacity = object.opacity;
+      object.lastOpacity = object.opacity;
     }
 
   },
@@ -4993,11 +5011,17 @@ MathBox.Sprite = function (element, tangent, distance) {
   this.height = 0;
   this.visible = true;
   this.measure = true;
+  this.render = null;
   this.content = '';
+
+  this.lastLeft = null;
+  this.lastTop = null;
+  this.lastOpacity = null;
 
   element.style.position = 'absolute';
   element.style.left = 0;
   element.style.top = 0;
+  element.style.opacity = 0;
 
   THREE.Object3D.call(this);
 }
@@ -5109,7 +5133,8 @@ MathBox.Curve.prototype = _.extend(new MathBox.Primitive(null), {
     this.line.show(options.line);
     this.points.show(options.points);
 
-    options.live && this.calculate();
+    var visible = (options.line || options.points) && this.style.get('opacity') > 0;
+    visible && options.live && this.calculate();
   },
 
   make: function () {
@@ -5668,8 +5693,9 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
   adjust: function (viewport) {
     var options = this.get();
-    // Bug: Vector foreshortening requires live to be always-on
-    (true || options.live) && this.calculate(viewport);
+
+    // Vector foreshortening requires live to be always-on
+    (options.arrow || options.live) && this.calculate(viewport);
     _.each(this.arrows, function (arrow) {
       arrow.show(options.arrow);
     });
@@ -5829,7 +5855,8 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
     this.line.show(options.line);
     this.points.show(options.points);
 
-    options.live && this.calculate();
+    var visible = (options.mesh || options.line || options.points) && this.style.get('opacity') > 0;
+    visible && options.live && this.calculate();
   },
 
   make: function () {
@@ -6300,6 +6327,10 @@ MathBox.Renderable.prototype = {
     }
   },
 
+  isVisible: function () {
+    return this.object && this.object.visible;
+  },
+
   composeTransform: function (position, rotation, scale) {
 		var mRotation = THREE.Matrix4.__m1;
 		var mScale = THREE.Matrix4.__m2;
@@ -6350,8 +6381,10 @@ MathBox.Renderable.prototype = {
 
       // Set zIndex
       if ((changed.opacity !== undefined || changed.zIndex !== undefined) && this.material) {
+        // Solid objects are drawn front to back
         // Transparent objects are drawn back to front
-        var sign = (style.opacity < 1) ? -1 : 1;
+        // Always make sure positive zIndex makes it draw on top of everything else
+        var sign = (style.opacity < 1) ? 1 : -1;
         this.object.renderDepth = style.zIndex * sign;
       }
     }
@@ -6517,6 +6550,10 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
 
     // Refresh material uniforms.
     this.refresh();
+  },
+
+  isVisible: function () {
+    return this.visible && (this.style.get('opacity') > 0);
   },
 
   adjust: function (viewport) {
@@ -6741,12 +6778,16 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         anchor = this._anchor,
         distance = options.distance,
         decimals = options.decimals,
-        style = this.style;
+        style = this.style,
+        opacity = style.get('opacity');
 
     var mathjax = window.MathJax && MathJax.Hub;
 
+    var ilog10 = 1/Math.log(10);
+
     // Update labels
     _.each(sprites, function (sprite, i) {
+
       // Transform anchor point
       sprite.position.copy(points[i]);
       viewport.to(sprite.position);
@@ -6754,7 +6795,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
       sprite.distance = options.distance;
 
       // Set opacity
-      sprite.element.style.opacity = style.get('opacity');
+      sprite.opacity = opacity;
 
       // Set content
       var text = '';
@@ -6769,7 +6810,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
           if (x != 0) {
             var s = x < 0 ? -1 : 1;
             x = Math.abs(x);
-            var unit = Math.pow(10, (decimals - 1) - Math.floor(Math.log(x)/Math.log(10)));
+            var unit = Math.pow(10, (decimals - 1) - Math.floor(Math.log(x) * ilog10));
             x = s * Math.round(unit * x) / unit;
             text = x;
           }

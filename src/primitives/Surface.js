@@ -42,7 +42,8 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
     this.line.show(options.line);
     this.points.show(options.points);
 
-    options.live && this.calculate();
+    var visible = (options.mesh || options.line || options.points) && this.style.get('opacity') > 0;
+    visible && options.live && this.calculate();
   },
 
   make: function () {

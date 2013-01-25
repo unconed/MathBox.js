@@ -53,6 +53,7 @@ MathBox.Overlay.prototype = {
   update: function (camera) {
 		this.fov = 0.5 / Math.tan( camera.fov * Math.PI / 360 ) * this.height;
 
+    window.ii = 0;
     // Iterate over individual objects for update
     _.each(this.sprites, function (sprite) {
       this._update(sprite, camera);
@@ -128,10 +129,12 @@ MathBox.Overlay.prototype = {
       visible = visible && parent.visible;
       parent = parent.parent;
     }
-    object.render = visible;
+    object.render = visible && (object.opacity > 0);
 
     if (!object.render) {
-      object.element.style.display = 'none';
+      if (render || render === null) {
+        object.element.style.display = 'none';
+      }
       return;
     }
     else if (!render) {
@@ -167,13 +170,19 @@ MathBox.Overlay.prototype = {
     y = Math.round(y);
 
     // Set position
-    if (object.left != x) {
+    if (object.left !== x) {
       object.left = x;
       object.element.style.left = x + 'px';
     }
-    if (object.top != y) {
+    if (object.top !== y) {
       object.top = y;
       object.element.style.top  = y + 'px';
+    }
+
+    // Set opacity
+    if (object.lastOpacity !== object.opacity) {
+      object.element.style.opacity = object.opacity;
+      object.lastOpacity = object.opacity;
     }
 
   },
@@ -188,11 +197,17 @@ MathBox.Sprite = function (element, tangent, distance) {
   this.height = 0;
   this.visible = true;
   this.measure = true;
+  this.render = null;
   this.content = '';
+
+  this.lastLeft = null;
+  this.lastTop = null;
+  this.lastOpacity = null;
 
   element.style.position = 'absolute';
   element.style.left = 0;
   element.style.top = 0;
+  element.style.opacity = 0;
 
   THREE.Object3D.call(this);
 }
