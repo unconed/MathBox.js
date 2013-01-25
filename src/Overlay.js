@@ -53,7 +53,6 @@ MathBox.Overlay.prototype = {
   update: function (camera) {
 		this.fov = 0.5 / Math.tan( camera.fov * Math.PI / 360 ) * this.height;
 
-    window.ii = 0;
     // Iterate over individual objects for update
     _.each(this.sprites, function (sprite) {
       this._update(sprite, camera);
