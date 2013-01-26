@@ -106,7 +106,7 @@ MathBox.Renderable.prototype = {
         // Solid objects are drawn front to back
         // Transparent objects are drawn back to front
         // Always make sure positive zIndex makes it draw on top of everything else
-        var sign = (style.opacity < 1) ? 1 : -1;
+        var sign = (style.opacity == 1) ? 1 : -1;
         this.object.renderDepth = style.zIndex * sign;
       }
     }

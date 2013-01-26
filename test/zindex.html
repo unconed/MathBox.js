@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Test: zIndex / Layering.</title>
+
+  <!--
+    Tests whether z sorting works correctly
+  -->
+
+  <style type="text/css" media="screen">
+    html, body { height: 100%; }
+    body { margin: 0; padding: 0 }
+    canvas { display: block }
+  </style>
+
+  <script type="text/javascript" charset="utf-8" src="../vendor/domready.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../vendor/console-extras/dist/console-extras.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
+
+  <script type="text/javascript" charset="utf-8">
+  /**
+   * Bootstrap
+   */
+  DomReady.ready(function() {
+    ThreeBox.preload([
+      '../shaders/snippets.glsl.html',
+    ], function () {
+
+      // MathBox boilerplate
+      var mathbox = window.mathbox = mathBox({
+        cameraControls: true,
+        cursor:         true,
+        controlClass:   ThreeBox.OrbitControls,
+        elementResize:  true,
+        fullscreen:     true,
+        screenshot:     true,
+        stats:          false,
+        scale:          1,
+      }).start();
+
+      var orangered = 0xE54723;
+      var green = 0x20c050;
+
+      // Viewport camera/setup
+      mathbox
+        // Cartesian viewport
+        .viewport({
+          type: 'cartesian',
+          range: [[-1, 1], [-1, 1], [-1, 1]],
+          scale: [1, 1],
+        })
+        .camera({
+          orbit: 3.5,
+          phi: τ/4,
+          theta: 0,
+        })
+        .transition(200)
+
+        // Real Z dots
+        .curve({
+          n: 1,
+          pointSize: 20,
+          data: [[0, 0, -.01]],
+          points: true,
+          line: false,
+          color: orangered,
+        })
+        .curve({
+          n: 1,
+          pointSize: 20,
+          data: [[0.02, 0, 0]],
+          points: true,
+          line: false,
+          color: green,
+        })
+        .curve({
+          n: 1,
+          pointSize: 20,
+          data: [[0.04, 0, .01]],
+          points: true,
+          line: false,
+        })
+
+        // Solid zIndex dots
+        .curve({
+          n: 1,
+          pointSize: 20,
+          data: [[-.5, 0, 0]],
+          points: true,
+          line: false,
+          color: orangered,
+          zIndex: 0,
+        })
+        .curve({
+          n: 1,
+          pointSize: 20,
+          data: [[-.5+0.02, 0, 0]],
+          points: true,
+          line: false,
+          color: green,
+          zIndex: 100,
+        })
+        .curve({
+          n: 1,
+          pointSize: 20,
+          data: [[-.5+0.04, 0, 0]],
+          points: true,
+          line: false,
+          zIndex: 200,
+        })
+
+        // Transparent zIndex dots
+        .curve({
+          n: 1,
+          pointSize: 20,
+          data: [[.5, 0, 0]],
+          points: true,
+          line: false,
+          color: orangered,
+          zIndex: 0,
+          opacity: .5,
+        })
+        .curve({
+          n: 1,
+          pointSize: 20,
+          data: [[.5+0.02, 0, 0]],
+          points: true,
+          line: false,
+          color: green,
+          zIndex: 100,
+          opacity: .5,
+        })
+        .curve({
+          n: 1,
+          pointSize: 20,
+          data: [[.5+0.04, 0, 0]],
+          points: true,
+          line: false,
+          zIndex: 200,
+          opacity: .5,
+        })
+
+    });
+  });
+  </script>
+  
+  <script type="text/javascript" charset="utf-8">
+  </script>
+
+</head>
+<body>
+</body>
+</html>

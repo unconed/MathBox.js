@@ -21104,7 +21104,8 @@ THREE.WebGLRenderer = function ( parameters ) {
 				buffer: buffer,
 				object: object,
 				opaque: null,
-				transparent: null
+				transparent: null,
+				z: 0,
 			}
 		);
 
@@ -21116,7 +21117,8 @@ THREE.WebGLRenderer = function ( parameters ) {
 			{
 				object: object,
 				opaque: null,
-				transparent: null
+				transparent: null,
+				z: 0,
 			}
 		);
 

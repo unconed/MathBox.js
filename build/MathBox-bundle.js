@@ -21280,7 +21280,8 @@ THREE.WebGLRenderer = function ( parameters ) {
 				buffer: buffer,
 				object: object,
 				opaque: null,
-				transparent: null
+				transparent: null,
+				z: 0,
 			}
 		);
 
@@ -21292,7 +21293,8 @@ THREE.WebGLRenderer = function ( parameters ) {
 			{
 				object: object,
 				opaque: null,
-				transparent: null
+				transparent: null,
+				z: 0,
 			}
 		);
 
@@ -43751,6 +43753,8 @@ MathBox.Materials.prototype = {
    * Return a generic material.
    */
   generic: function (options) {
+    options = options || {};
+
     // Check for cached instance if not using custom shader
     if (!options.shaders || !Object.keys(options.shaders).length) {
       var hash = this.hash(options);
@@ -43761,7 +43765,6 @@ MathBox.Materials.prototype = {
 
     // Prepare new shadergraph factory.
     var factory = this.factory();
-    options = options || {};
     var shaders = options.shaders || {};
 
     // Read out vertex position.
@@ -43792,7 +43795,12 @@ MathBox.Materials.prototype = {
 
     // Apply finalizing shaders.
     var material = this.finalize(factory, options);
-    return (this.cache[hash] = material);
+
+    if (hash) {
+      // Cache material
+      this.cache[hash] = material;
+    }
+    return material;
   },
 
   /**
@@ -46059,7 +46067,7 @@ MathBox.Renderable.prototype = {
         // Solid objects are drawn front to back
         // Transparent objects are drawn back to front
         // Always make sure positive zIndex makes it draw on top of everything else
-        var sign = (style.opacity < 1) ? 1 : -1;
+        var sign = (style.opacity == 1) ? 1 : -1;
         this.object.renderDepth = style.zIndex * sign;
       }
     }
