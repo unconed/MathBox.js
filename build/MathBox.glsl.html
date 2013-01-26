@@ -354,6 +354,11 @@ void fragmentShaded() {
 
   float dotNormal = dot(normal, lightVector);
   float diffuse = dotNormal * .5 + .5;
+	#ifdef DOUBLE_SIDED
+	  if (!gl_FrontFacing) {
+	    diffuse = diffuse * .9 + .1;
+	  }
+	#endif
 
 	vec3 halfVector = normalize(lightVector + viewPosition);
 	float dotNormalHalf = max(dot(normal, halfVector), 0.0);
@@ -367,7 +372,7 @@ void fragmentShaded() {
   vec3 sampleLinear = sample.xyz * sample.xyz;
   vec3 colorLinear = color * color;
 
-  // don't gamma correct specular color
+  // Don't ungamma the specular value, looks nicer, it adds subtle color shading
   vec3 specColor = normalize(.1 + sqrt(color)) * .35 * specular;
 
   vec3 textured = colorLinear + (colorLinear * sampleLinear.xyz - colorLinear) * mapColor;

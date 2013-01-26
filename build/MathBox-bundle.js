@@ -43696,15 +43696,69 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
  */
 MathBox.Materials = function (stage) {
   this.stage = stage;
-  this.list = [];
+  this.cache = {};
 }
 
 MathBox.Materials.prototype = {
 
   /**
+   * Get material hash
+   */
+  hash: function (options) {
+    // Calculate material hash
+    var keys = Object.keys(options);
+    var hash = '';
+    keys.sort();
+    _.each(keys, function (key) {
+      hash += key + '/';
+      hash += options[key] + '/';
+    });
+
+    return hash;
+  },
+
+  /**
+   * Clone cached material
+   */
+  clone: function (material) {
+    var clone = new THREE.ShaderMaterial({
+      vertexShader: material.vertexShader,
+      fragmentShader: material.fragmentShader,
+    });
+    clone.attributes      = material.attributes ? {} : null;
+    clone.uniforms        = {};
+    clone.wireframe       = material.wireframe;
+    clone.applyUniforms   = material.applyUniforms;
+    clone.applyAttributes = material.applyAttributes;
+
+    _.each(material.uniforms, function (uniform, key) {
+      clone.uniforms[key] = {
+        type: uniform.type,
+        value: (uniform.value && uniform.value.clone) ? uniform.value.clone() : uniform.value,
+      };
+    });
+    _.each(material.attributes, function (attributes, key) {
+      clone.attributes[key] = {
+        type: attributes.type,
+        value: attributes.value,
+      };
+    });
+
+    return clone;
+  },
+
+  /**
    * Return a generic material.
    */
   generic: function (options) {
+    // Check for cached instance if not using custom shader
+    if (!options.shaders || !Object.keys(options.shaders).length) {
+      var hash = this.hash(options);
+      if (this.cache[hash]) {
+        return this.clone(this.cache[hash]);
+      }
+    }
+
     // Prepare new shadergraph factory.
     var factory = this.factory();
     options = options || {};
@@ -43737,7 +43791,8 @@ MathBox.Materials.prototype = {
     }
 
     // Apply finalizing shaders.
-    return this.finalize(factory, options);
+    var material = this.finalize(factory, options);
+    return (this.cache[hash] = material);
   },
 
   /**
@@ -43831,7 +43886,7 @@ MathBox.Materials.prototype = {
       uniforms: program.uniforms,
       attributes: program.attributes,
       vertexShader: program.vertexShader,
-      fragmentShader: program.fragmentShader//,
+      fragmentShader: program.fragmentShader,
     });
 
     // Set necessary three.js flags
@@ -43891,7 +43946,7 @@ MathBox.Materials.prototype = {
    */
   viewport: function (factory, absolute) {
     this.stage.viewport().shader(factory, absolute);
-  }//,
+  },
 };
 /**
  * Helper to place equally spaced ticks in a range at sensible positions.
