@@ -4,39 +4,6 @@
   <meta charset="utf-8">
   <title>MathBox</title>
 
-  <style type="text/css" media="screen">
-    html, body { height: 100%; }
-    body { margin: 0; padding: 0 }
-    canvas { display: block }
-
-    .mathbox-label {
-      font-family: 'klavika-web', sans-serif;
-      font-weight: normal;
-      font-style: normal;
-      text-shadow:
-        3px 0px 1px rgb(255, 255, 255),
-        -3px 0px 1px rgb(255, 255, 255),
-        0px -3px 1px rgb(255, 255, 255),
-        0px 3px 1px rgb(255, 255, 255),
-        2px 2px 1px rgb(255, 255, 255),
-        -2px 2px 1px rgb(255, 255, 255),
-        2px -2px 1px rgb(255, 255, 255),
-        -2px -2px 1px rgb(255, 255, 255),
-        3px 2px 1px rgb(255, 255, 255),
-        -3px 2px 1px rgb(255, 255, 255),
-        3px -2px 1px rgb(255, 255, 255),
-        -3px -2px 1px rgb(255, 255, 255),
-        1px 3px 1px rgb(255, 255, 255),
-        -1px 3px 1px rgb(255, 255, 255),
-        1px -3px 1px rgb(255, 255, 255),
-        -1px -3px 1px rgb(255, 255, 255),
-        -1px -1px 1px rgb(255, 255, 255),
-        -1px 1px 1px rgb(255, 255, 255),
-        1px -1px 1px rgb(255, 255, 255),
-        1px 1px 1px rgb(255, 255, 255);
-    }
-  </style>
-
   <script type="text/javascript" src="http://use.typekit.com/nde6wmn.js"></script>
   <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
 
@@ -787,6 +754,37 @@
   </script>
 
   <style type="text/css" media="screen">
+    html, body { height: 100%; }
+    body { margin: 0; padding: 0 }
+    canvas { display: block }
+
+    .mathbox-label {
+      font-family: 'klavika-web', sans-serif;
+      font-weight: normal;
+      font-style: normal;
+      text-shadow:
+        3px 0px 1px rgb(255, 255, 255),
+        -3px 0px 1px rgb(255, 255, 255),
+        0px -3px 1px rgb(255, 255, 255),
+        0px 3px 1px rgb(255, 255, 255),
+        2px 2px 1px rgb(255, 255, 255),
+        -2px 2px 1px rgb(255, 255, 255),
+        2px -2px 1px rgb(255, 255, 255),
+        -2px -2px 1px rgb(255, 255, 255),
+        3px 2px 1px rgb(255, 255, 255),
+        -3px 2px 1px rgb(255, 255, 255),
+        3px -2px 1px rgb(255, 255, 255),
+        -3px -2px 1px rgb(255, 255, 255),
+        1px 3px 1px rgb(255, 255, 255),
+        -1px 3px 1px rgb(255, 255, 255),
+        1px -3px 1px rgb(255, 255, 255),
+        -1px -3px 1px rgb(255, 255, 255),
+        -1px -1px 1px rgb(255, 255, 255),
+        -1px 1px 1px rgb(255, 255, 255),
+        1px -1px 1px rgb(255, 255, 255),
+        1px 1px 1px rgb(255, 255, 255);
+    }
+
     #info {
       position: absolute;
       left: 50%;
@@ -797,7 +795,7 @@
       margin-left: -150px;
 
       padding: 25px;
-      background: rgba(0, 0, 0, .3);
+      background: rgba(0, 0, 0, .5);
       color: #fff;
 
       font-family: "Lucida Grande", sans-serif;
@@ -815,7 +813,7 @@
     }
 
     #info kbd {
-      background: #ccc;
+      background: #aaa;
       box-shadow: 0px 1px 1px rgba(0, 0, 0, .3);
       border-radius: 3px;
       padding: 3px;
