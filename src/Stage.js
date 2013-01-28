@@ -417,7 +417,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       delete original.sequence;
 
       // Sort options into animatable and non-animatable
-      options = _.extend({}, options);
+      var newOptions = _.extend({}, options);
       var remove = [];
       _.each(options, function (value, key) {
         if (key == 'id' || typeof value == 'boolean' || value === null) {
@@ -425,7 +425,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
           remove.push(key);
         }
       });
-      _.each(remove, function (key) { delete options[key] });
+      _.each(remove, function (key) { delete newOptions[key] });
 
       // Force ID change
       if (original.id == primitive.get('id')) {
@@ -434,7 +434,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
       // Spawn clone and animate it to new properties
       var copy = this.spawn(primitive.type(), original, { duration: 0 });
-      this.animate(copy, options, animate);
+      this.animate(copy, newOptions, animate);
     }.bind(this));
 
     return this;

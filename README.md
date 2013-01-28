@@ -334,7 +334,7 @@ Bezier Curve
 
 Bezier Surface
 ```javascript
-.beziersurface({
+.bezierSurface({
   n: [ 64, 64 ],                       // Number of points in each direction
   domain: [[0, 1], [0, 1]],            // X/Y Domain in interpolation space
   data: null,                          // Array of control points, each an array of 2 or 3 elements

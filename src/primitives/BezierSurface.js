@@ -31,7 +31,6 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
       doubleSided: true,
       flipSided: false,
       shaded: true,
-      map: null,
       style: {}//,
     };
   },
@@ -65,7 +64,7 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
       _.loop(order + 1, function (i) {
         if (data && (data[j] !== undefined) && (data[j][i] !== undefined)) {
           // Use data if available
-          p = data[i];
+          p = data[j][i];
         }
         else {
           // Use expression.

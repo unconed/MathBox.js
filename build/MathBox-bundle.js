@@ -43527,7 +43527,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
       delete original.sequence;
 
       // Sort options into animatable and non-animatable
-      options = _.extend({}, options);
+      var newOptions = _.extend({}, options);
       var remove = [];
       _.each(options, function (value, key) {
         if (key == 'id' || typeof value == 'boolean' || value === null) {
@@ -43535,7 +43535,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
           remove.push(key);
         }
       });
-      _.each(remove, function (key) { delete options[key] });
+      _.each(remove, function (key) { delete newOptions[key] });
 
       // Force ID change
       if (original.id == primitive.get('id')) {
@@ -43544,7 +43544,7 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
       // Spawn clone and animate it to new properties
       var copy = this.spawn(primitive.type(), original, { duration: 0 });
-      this.animate(copy, options, animate);
+      this.animate(copy, newOptions, animate);
     }.bind(this));
 
     return this;
@@ -44474,7 +44474,7 @@ MathBox.CameraProxy = function (world, options) {
     orbit: options.orbit || 3.5,
     phi: options.phi || τ/4,
     theta: options.theta || 0,
-    lookAt: [0, 0, 0],
+    lookAt: options.lookAt || [0, 0, 0],
   });
 
   this.singleton = 'camera';
@@ -45738,7 +45738,6 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
       doubleSided: true,
       flipSided: false,
       shaded: true,
-      map: null,
       style: {}//,
     };
   },
@@ -45772,7 +45771,7 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
       _.loop(order + 1, function (i) {
         if (data && (data[j] !== undefined) && (data[j][i] !== undefined)) {
           // Use data if available
-          p = data[i];
+          p = data[j][i];
         }
         else {
           // Use expression.

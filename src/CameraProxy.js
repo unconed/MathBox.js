@@ -7,7 +7,7 @@ MathBox.CameraProxy = function (world, options) {
     orbit: options.orbit || 3.5,
     phi: options.phi || τ/4,
     theta: options.theta || 0,
-    lookAt: [0, 0, 0],
+    lookAt: options.lookAt || [0, 0, 0],
   });
 
   this.singleton = 'camera';
