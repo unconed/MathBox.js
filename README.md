@@ -411,6 +411,11 @@ Vector
 })
 ```
 
-* * *
+Contributions
+-------------
 
-Steven Wittens - http://acko.net/
+MathBox created by Steven Wittens - http://acko.net/
+
+Contributors:
+
+* So8res (Nate Soares)
