@@ -35,7 +35,5 @@ Issues
 -------
  * A lot of wasteful processing occurs due to using a normal Mesh + Geometry + ShaderMaterial. None of the built-in three.js lighting / normals / stuff works on it. Should explore BufferGeometry instead and save lots of wasteful processing.
  * Need to replace ArrowHead with ArrowHeads, it's too slow for massive vector fields
- * Compiled materials should be cached, it's slow.
  * The Director's rollback generator mangles complicated set/animate combinations. Need to figure out a better way to do this. Perhapas just replying it in reverse at high speed is a better solution than the current one where it tries to do it everything at once.
- * Sometimes lines glitch and alternate between different line widths. Seems to happen only after polar transforms. It resembles a z-sorting bug, but it seems to happen even when there's nothing in front or behind it.
  * The current approach of on-demand allocation tends to create hiccups if a lot of objects are added simultaneously. This can be hidden by waiting e.g. 100ms before moving anything and should ideally be done for you.
