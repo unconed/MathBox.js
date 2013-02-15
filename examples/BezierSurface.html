@@ -55,6 +55,10 @@
 
       // Arrow controls
       // Controls for stand-alone
+      window.addEventListener('touchstart', function (e) {
+        director.forward();
+        document.getElementById('info').style.opacity = '0';
+      });
       window.addEventListener('keydown', function (e) {
         if (e.keyCode == 38 || e.keyCode == 37) director.back();
         else if (e.keyCode == 40 || e.keyCode == 39) director.forward();
