@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Example: Procedural Landscape Generation</title>
+
+  <!--
+    This example shows how layers of cosine noise (or equivalent) can be stacked
+    to generate a fractal-like landscape.
+  -->
+
+  <script type="text/javascript" charset="utf-8" src="../vendor/domready.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
+
+  <script type="text/javascript" charset="utf-8">
+  /**
+   * Bootstrap
+   */
+  DomReady.ready(function() {
+    ThreeBox.preload([
+      '../shaders/snippets.glsl.html',
+    ], function () {
+
+      // MathBox boilerplate
+      var mathbox = window.mathbox = mathBox({
+        cameraControls: true,
+        cursor:         true,
+        controlClass:   ThreeBox.OrbitControls,
+        elementResize:  true,
+        fullscreen:     true,
+        screenshot:     true,
+        stats:          false,
+        scale:          1,
+      }).start();
+
+      // Viewport camera/setup
+      mathbox
+        .viewport({
+          type: 'cartesian',
+          range: [[-1, 1], [-.6, 1.4], [-1, 1]],
+          scale: [.65, .65, .65],
+        })
+        .camera({
+          phi: τ/6-τ/4,
+          theta: .45,
+        });
+
+      // Director
+      var director = window.director = new MathBox.Director(mathbox, script);
+
+      // Show info if not iframed.
+      if (top == window) {
+        document.getElementById('info').style.opacity = 1;
+      }
+
+      // Arrow controls
+      // Controls for stand-alone
+      window.addEventListener('touchstart', function (e) {
+        director.forward();
+        document.getElementById('info').style.opacity = '0';
+      });
+      window.addEventListener('keydown', function (e) {
+        if (e.keyCode == 38 || e.keyCode == 37) director.back();
+        else if (e.keyCode == 40 || e.keyCode == 39) director.forward();
+        else {
+          return;
+        }
+
+        document.getElementById('info').style.opacity = 0;
+      });
+    });
+  });
+  </script>
+
+  <script type="text/javascript" charset="utf-8">
+  /**
+   * Custom helpers
+   */
+
+   function bump(x, y, cx, cy, s) {
+     x -= cx;
+     y -= cy;
+     var d = Math.sqrt(x*x + y*y);
+     var c = Math.min(π, d*π*s);
+     return .5+.5*Math.cos(c);
+   }
+
+
+  // Script
+  var script = [
+
+    // grid
+
+    [
+      ['add', 'surface', {
+        id: "wire",
+        domain: [[-1, 1], [-1, 1]],
+        expression: function (x, y, i, j) {
+          return [x, 0, y];
+        },
+        n: 32,
+        line: true,
+        mesh: false,
+        live: true,
+        doubleSided: false,
+        flipSided: true,
+        zIndex: 0,
+        color: 0x0,
+        opacity: .2,
+        shaded: false,
+      }, {
+        duration: 500,
+      }],
+      ['add', 'surface', {
+        id: "fill",
+        domain: [[-1, 1], [-1, 1]],
+        expression: function (x, y, i, j) {
+          return [x, 0, y];
+        },
+        opacity: 1,
+        doubleSided: true,
+        flipSided: true,
+        zIndex: -20,
+        shaded: true,
+        color: 0xdddddd,
+      }, {
+        duration: 0,
+      }],
+      ['add', 'surface', {
+        id: 'points1',
+        n: 2,
+        points: true,
+        line: false,
+        mesh: false,
+        domain: [[-1, 1], [-1, 1]],
+        expression: function (x, y, i, j) {
+          return [x, 0, y];
+        },
+        shaded: false,
+        pointSize: 20,
+        zIndex: 10,
+      }]
+    ],
+
+    [
+      ['animate', '#points1, #wire, #fill', {
+        expression: function (x, y, i, j) {
+          var f = Math.max(0, director.clock(2) - .3);
+          f = (f < 1) ? f*f/2 : f-.5;
+
+          function point(x, y) {
+            return Math.sin(x - y*1.3 + Math.sin(f*.31+1+x) + .31 + f)*.5 + .5;
+          }
+
+          var y11 = point(-1, -1);
+          var y12 = point(-1, 1);
+          var y21 = point(1, -1);
+          var y22 = point(1, 1);
+
+          var dx = .5-.5*Math.cos(π*(y*.5+.5));
+          var dy = .5-.5*Math.cos(π*(x*.5+.5));
+
+          var y1 = y11 + (y12 - y11) * dx;
+          var y2 = y21 + (y22 - y21) * dx;
+          var h  = y1 + (y2 - y1) * dy;
+
+          return [x, h, y];
+        },
+      }, {
+        duration: 1000,
+      }],
+    ],
+
+    [
+      ['remove', '#points1'],
+      ['animate', '#wire, #fill', {
+        expression: function (x, y, i, j) {
+          var h = 0, f = 0;
+
+          function point(x, y) {
+            return Math.sin(x - y*1.3 + Math.sin(f*.31+1+x) + .31 + f)*.5 + .5;
+          }
+
+          function octave(x, y, scale) {
+            x *= scale;
+            y *= scale;
+
+            var y11 = point(x, y);
+            var y12 = point(x, y+1);
+            var y21 = point(x+1, y);
+            var y22 = point(x+1, y+1);
+
+            var fx = x - Math.floor(x);
+            var fy = y - Math.floor(y);
+
+            var dx = .5-.5*Math.cos(π*fx);
+            var dy = .5-.5*Math.cos(π*fy);
+
+            var y1 = y11 + (y12 - y11) * dx;
+            var y2 = y21 + (y22 - y21) * dx;
+
+            return y1 + (y2 - y1) * dy;
+          }
+
+          h += octave(x, y, 1);
+
+          return [x, h, y];
+        },
+      }, {
+        duration: 1000,
+      }],
+      ['animate', 'camera', {
+        phi: τ/6,
+        theta: .9,
+      }, {
+        duration: 3000,
+      }],
+    ],
+
+    [
+      ['animate', '#wire, #fill', {
+        expression: function (x, y, i, j) {
+          var h = 0, f = 0;
+
+          function point(x, y) {
+            return Math.sin(x - y*1.3 + Math.sin(f*.31+1+x) + .31 + f)*.5 + .5;
+          }
+
+          function octave(x, y, scale) {
+            x *= scale;
+            y *= scale;
+
+            var fx = Math.floor(x);
+            var fy = Math.floor(y);
+            var ix = x - fx;
+            var iy = y - fy;
+
+            var y11 = point(fx, fy);
+            var y12 = point(fx, fy+1);
+            var y21 = point(fx+1, fy);
+            var y22 = point(fx+1, fy+1);
+
+            var dx = .5-.5*Math.cos(π*iy);
+            var dy = .5-.5*Math.cos(π*ix);
+
+            var y1 = y11 + (y12 - y11) * dx;
+            var y2 = y21 + (y22 - y21) * dx;
+
+            return y1 + (y2 - y1) * dy;
+          }
+
+          h += octave(x, y, 1);
+
+          return [x, h, y];
+        },
+      }, {
+        duration: 1000,
+      }],
+      ['animate', 'camera', {
+        phi: τ/6+τ/4,
+        theta: .6,
+      }, {
+        delay: 1000,
+        duration: 2000,
+      }],
+    ],
+
+    [
+      ['animate', '#wire, #fill', {
+        expression: function (x, y, i, j) {
+          var h = 0, f = 0;
+
+          function point(x, y) {
+            return Math.sin(x - y*1.3 + Math.sin(f*.31+1+x) + .31 + f)*.5 + .5;
+          }
+
+          function octave(x, y, scale) {
+            x *= scale;
+            y *= scale;
+
+            var fx = Math.floor(x);
+            var fy = Math.floor(y);
+            var ix = x - fx;
+            var iy = y - fy;
+
+            var y11 = point(fx, fy);
+            var y12 = point(fx, fy+1);
+            var y21 = point(fx+1, fy);
+            var y22 = point(fx+1, fy+1);
+
+            var dx = .5-.5*Math.cos(π*iy);
+            var dy = .5-.5*Math.cos(π*ix);
+
+            var y1 = y11 + (y12 - y11) * dx;
+            var y2 = y21 + (y22 - y21) * dx;
+
+            return y1 + (y2 - y1) * dy;
+          }
+
+          h += octave(x, y, 1)*.9;
+          h += octave(x, y, 2)*.5;
+
+          return [x, h, y];
+        },
+      }, {
+        duration: 1000,
+      }],
+    ],
+
+    [
+      ['animate', '#wire, #fill', {
+        expression: function (x, y, i, j) {
+          var h = 0, f = 0;
+
+          function point(x, y) {
+            return Math.sin(x - y*1.3 + Math.sin(f*.31+1+x) + .31 + f)*.5 + .5;
+          }
+
+          function octave(x, y, scale) {
+            x *= scale;
+            y *= scale;
+
+            var fx = Math.floor(x);
+            var fy = Math.floor(y);
+            var ix = x - fx;
+            var iy = y - fy;
+
+            var y11 = point(fx, fy);
+            var y12 = point(fx, fy+1);
+            var y21 = point(fx+1, fy);
+            var y22 = point(fx+1, fy+1);
+
+            var dx = .5-.5*Math.cos(π*iy);
+            var dy = .5-.5*Math.cos(π*ix);
+
+            var y1 = y11 + (y12 - y11) * dx;
+            var y2 = y21 + (y22 - y21) * dx;
+
+            return y1 + (y2 - y1) * dy;
+          }
+
+          h += octave(x, y, 1)*.8;
+          h += octave(x, y, 2)*.4;
+          h += octave(x, y, 4)*.22;
+          h += octave(x, y, 8)*.125;
+
+          return [x, h, y];
+        },
+      }, {
+        duration: 1000,
+      }],
+      ['animate', 'camera', {
+        phi: τ/6-τ,
+        theta: .9,
+      }, {
+        delay: 1000,
+        duration: 10000,
+      }],
+    ],
+
+    [],
+
+  ];
+
+
+  </script>
+
+  <script type="text/javascript" charset="utf-8">
+    DomReady.ready(function () {
+      if (location.href.match(/^file:/)) {
+        document.getElementById('info').style.opacity = 1;
+        document.getElementById('info').innerHTML = "Sorry. This example does not work when accessed using file://. Please use an http:// host and try again.";
+      }
+    });
+  </script>
+
+  <style type="text/css" media="screen">
+    html, body { height: 100%; }
+    body { margin: 0; padding: 0 }
+    canvas { display: block }
+
+    #info {
+      position: absolute;
+      left: 50%;
+      bottom: 50px;
+      z-index: 20;
+
+      width: 300px;
+      margin-left: -150px;
+
+      padding: 25px;
+      background: rgba(0, 0, 0, .5);
+      color: #fff;
+
+      font-family: "Lucida Grande", sans-serif;
+      font-size: 16px;
+      text-align: center;
+
+      border-radius: 3px;
+      text-shadow: 0px 1px 0px rgba(0, 0, 0, .4);
+
+      opacity: 0;
+
+      -webkit-transition: opacity 300ms ease-in-out;
+      -moz-transition: opacity 300ms ease-in-out;
+      transition: opacity 300ms ease-in-out;
+    }
+
+    #info kbd {
+      background: #aaa;
+      box-shadow: 0px 1px 1px rgba(0, 0, 0, .3);
+      border-radius: 3px;
+      padding: 3px;
+      margin: 3px;
+
+      font-family: inherit;
+    }
+  </style>
+
+</head>
+<body>
+  <div id="info">Use the <kbd>←</kbd><kbd>→</kbd> keys to step through.</div>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" charset="utf-8">
+
+window.mathBoxSetup = function (mathbox) {
+
+  mathbox
+    .viewport({
+      type: 'cartesian',
+      range: [[-1, 1], [-.6, 1.4], [-1, 1]],
+      scale: [.85, .85, .85],
+    })
+    .camera({
+      phi: τ/6-τ/4,
+      theta: .45,
+    });
+
+}
+
+function bump(x, y, cx, cy, s) {
+  x -= cx;
+  y -= cy;
+  var d = Math.sqrt(x*x + y*y);
+  var c = Math.min(π, d*π*s);
+  return .5+.5*Math.cos(c);
+}
+
+window.mathBoxScript = [
+
+  // grid
+
+  [
+    ['add', 'surface', {
+      id: "wire",
+      domain: [[-1, 1], [-1, 1]],
+      expression: function (x, y, i, j) {
+        return [x, 0, y];
+      },
+      n: 32,
+      line: true,
+      mesh: false,
+      live: true,
+      doubleSided: false,
+      flipSided: true,
+      zIndex: 0,
+      color: 0x0,
+      opacity: .2,
+      shaded: false,
+    }, {
+      duration: 500,
+    }],
+    ['add', 'surface', {
+      id: "fill",
+      domain: [[-1, 1], [-1, 1]],
+      expression: function (x, y, i, j) {
+        return [x, 0, y];
+      },
+      opacity: 1,
+      doubleSided: true,
+      flipSided: true,
+      zIndex: -20,
+      shaded: true,
+      color: 0xdddddd,
+    }, {
+      duration: 0,
+    }],
+    ['add', 'surface', {
+      id: 'points1',
+      n: 2,
+      points: true,
+      line: false,
+      mesh: false,
+      domain: [[-1, 1], [-1, 1]],
+      expression: function (x, y, i, j) {
+        return [x, 0, y];
+      },
+      shaded: false,
+      pointSize: 20,
+      zIndex: 10,
+    }]
+  ],
+
+  [
+    ['animate', '#points1, #wire, #fill', {
+      expression: function (x, y, i, j) {
+        var f = Math.max(0, director.clock(2) - .3);
+        f = (f < 1) ? f*f/2 : f-.5;
+
+        function point(x, y) {
+          return Math.sin(x - y*1.3 + Math.sin(f*.31+1+x) + .31 + f)*.5 + .5;
+        }
+
+        var y11 = point(-1, -1);
+        var y12 = point(-1, 1);
+        var y21 = point(1, -1);
+        var y22 = point(1, 1);
+
+        var dx = .5-.5*Math.cos(π*(y*.5+.5));
+        var dy = .5-.5*Math.cos(π*(x*.5+.5));
+
+        var y1 = y11 + (y12 - y11) * dx;
+        var y2 = y21 + (y22 - y21) * dx;
+        var h  = y1 + (y2 - y1) * dy;
+
+        return [x, h, y];
+      },
+    }, {
+      duration: 1000,
+    }],
+  ],
+
+  [
+    ['remove', '#points1'],
+    ['animate', '#wire, #fill', {
+      expression: function (x, y, i, j) {
+        var h = 0, f = 0;
+
+        function point(x, y) {
+          return Math.sin(x - y*1.3 + Math.sin(f*.31+1+x) + .31 + f)*.5 + .5;
+        }
+
+        function octave(x, y, scale) {
+          x *= scale;
+          y *= scale;
+
+          var y11 = point(x, y);
+          var y12 = point(x, y+1);
+          var y21 = point(x+1, y);
+          var y22 = point(x+1, y+1);
+
+          var fx = x - Math.floor(x);
+          var fy = y - Math.floor(y);
+
+          var dx = .5-.5*Math.cos(π*fx);
+          var dy = .5-.5*Math.cos(π*fy);
+
+          var y1 = y11 + (y12 - y11) * dx;
+          var y2 = y21 + (y22 - y21) * dx;
+
+          return y1 + (y2 - y1) * dy;
+        }
+
+        h += octave(x, y, 1);
+
+        return [x, h, y];
+      },
+    }, {
+      duration: 1000,
+    }],
+    ['animate', 'camera', {
+      phi: τ/6,
+      theta: .9,
+    }, {
+      duration: 3000,
+    }],
+  ],
+
+  [
+    ['animate', '#wire, #fill', {
+      expression: function (x, y, i, j) {
+        var h = 0, f = 0;
+
+        function point(x, y) {
+          return Math.sin(x - y*1.3 + Math.sin(f*.31+1+x) + .31 + f)*.5 + .5;
+        }
+
+        function octave(x, y, scale) {
+          x *= scale;
+          y *= scale;
+
+          var fx = Math.floor(x);
+          var fy = Math.floor(y);
+          var ix = x - fx;
+          var iy = y - fy;
+
+          var y11 = point(fx, fy);
+          var y12 = point(fx, fy+1);
+          var y21 = point(fx+1, fy);
+          var y22 = point(fx+1, fy+1);
+
+          var dx = .5-.5*Math.cos(π*iy);
+          var dy = .5-.5*Math.cos(π*ix);
+
+          var y1 = y11 + (y12 - y11) * dx;
+          var y2 = y21 + (y22 - y21) * dx;
+
+          return y1 + (y2 - y1) * dy;
+        }
+
+        h += octave(x, y, 1);
+
+        return [x, h, y];
+      },
+    }, {
+      duration: 1000,
+    }],
+    ['animate', 'camera', {
+      phi: τ/6+τ/4,
+      theta: .6,
+    }, {
+      delay: 1000,
+      duration: 2000,
+    }],
+  ],
+
+  [
+    ['animate', '#wire, #fill', {
+      expression: function (x, y, i, j) {
+        var h = 0, f = 0;
+
+        function point(x, y) {
+          return Math.sin(x - y*1.3 + Math.sin(f*.31+1+x) + .31 + f)*.5 + .5;
+        }
+
+        function octave(x, y, scale) {
+          x *= scale;
+          y *= scale;
+
+          var fx = Math.floor(x);
+          var fy = Math.floor(y);
+          var ix = x - fx;
+          var iy = y - fy;
+
+          var y11 = point(fx, fy);
+          var y12 = point(fx, fy+1);
+          var y21 = point(fx+1, fy);
+          var y22 = point(fx+1, fy+1);
+
+          var dx = .5-.5*Math.cos(π*iy);
+          var dy = .5-.5*Math.cos(π*ix);
+
+          var y1 = y11 + (y12 - y11) * dx;
+          var y2 = y21 + (y22 - y21) * dx;
+
+          return y1 + (y2 - y1) * dy;
+        }
+
+        h += octave(x, y, 1)*.9;
+        h += octave(x, y, 2)*.5;
+
+        return [x, h, y];
+      },
+    }, {
+      duration: 1000,
+    }],
+  ],
+
+  [
+    ['animate', '#wire, #fill', {
+      expression: function (x, y, i, j) {
+        var h = 0, f = 0;
+
+        function point(x, y) {
+          return Math.sin(x - y*1.3 + Math.sin(f*.31+1+x) + .31 + f)*.5 + .5;
+        }
+
+        function octave(x, y, scale) {
+          x *= scale;
+          y *= scale;
+
+          var fx = Math.floor(x);
+          var fy = Math.floor(y);
+          var ix = x - fx;
+          var iy = y - fy;
+
+          var y11 = point(fx, fy);
+          var y12 = point(fx, fy+1);
+          var y21 = point(fx+1, fy);
+          var y22 = point(fx+1, fy+1);
+
+          var dx = .5-.5*Math.cos(π*iy);
+          var dy = .5-.5*Math.cos(π*ix);
+
+          var y1 = y11 + (y12 - y11) * dx;
+          var y2 = y21 + (y22 - y21) * dx;
+
+          return y1 + (y2 - y1) * dy;
+        }
+
+        h += octave(x, y, 1)*.8;
+        h += octave(x, y, 2)*.4;
+        h += octave(x, y, 4)*.22;
+        h += octave(x, y, 8)*.125;
+
+        return [x, h, y];
+      },
+    }, {
+      duration: 1000,
+    }],
+    ['animate', 'camera', {
+      phi: τ/6-τ,
+      theta: .9,
+    }, {
+      delay: 1000,
+      duration: 10000,
+    }],
+  ],
+
+  [],
+
+];
+
+</script>
