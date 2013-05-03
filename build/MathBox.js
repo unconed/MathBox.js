@@ -4446,6 +4446,9 @@ MathBox.Director = function (stage, script) {
 
   this.step = 0;
   this.lastCommand = 0;
+
+  this.time = 0;
+  this.lastTime = +new Date();
 };
 
 MathBox.Director.prototype = {
@@ -4459,6 +4462,14 @@ MathBox.Director.prototype = {
     }
     if (reset || !this.clocks[step]) this.clocks[step] = +new Date();
     return (+new Date() - this.clocks[step]) * .001;
+
+    var now = +new Date();
+    var delta = now - this.lastTime;
+    this.time += delta * this.stage().speed();
+    this.lastTime = now;
+
+    if (reset || !this.clocks[step]) this.clocks[step] = this.time;
+    return (this.time - this.clocks[step]) * .001;
   },
 
   /**
