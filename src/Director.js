@@ -26,8 +26,6 @@ MathBox.Director.prototype = {
     if (step > this.step) {
       return 0;
     }
-    if (reset || !this.clocks[step]) this.clocks[step] = +new Date();
-    return (+new Date() - this.clocks[step]) * .001;
 
     var now = +new Date();
     var delta = now - this.lastTime;
