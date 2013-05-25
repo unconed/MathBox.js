@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Example: Distance to a point on a curve.</title>
+
+  <!--
+  -->
+
+  <script type="text/javascript" charset="utf-8" src="../vendor/domready.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
+
+  <script type="text/javascript" charset="utf-8">
+  /**
+   * Bootstrap
+   */
+  DomReady.ready(function() {
+    ThreeBox.preload([
+      '../shaders/snippets.glsl.html',
+    ], function () {
+
+      // MathBox boilerplate
+      var mathbox = window.mathbox = mathBox({
+        cameraControls: true,
+        cursor:         true,
+        controlClass:   ThreeBox.OrbitControls,
+        elementResize:  true,
+        fullscreen:     true,
+        screenshot:     true,
+        stats:          false,
+        scale:          1,
+      }).start();
+
+      function arrayify(v) {
+        return [v.x, v.y, v.z];
+      }
+
+      // Set up spline
+      var controlPoints = [
+        new THREE.Vector3(-1, 0, -1),
+        new THREE.Vector3( .5, 0, -.5),
+        new THREE.Vector3(-.5, 0,  .5),
+        new THREE.Vector3( 1, 0,  1),
+      ];
+      var spline = new THREE.SplineCurve3(controlPoints);
+      var splinePoints = spline.getPoints(128);
+
+      var controlData = controlPoints.map(arrayify);
+      var splineData = splinePoints.map(arrayify);
+
+      // T finder
+      var targetPoint = [0, 0, 0];
+      var foundPoint = [0, 0, 0];
+      function findT(points, point) {
+        var dist = Infinity,
+            found = null,
+            v = point,
+            p = points,
+            n = points.length,
+            u = new THREE.Vector3();
+
+        // Find closest point
+        for (var i = 0; i < n; ++i) {
+          u.sub(p[i], v);
+          var d = u.length();
+          if (d < dist) {
+            dist = d;
+
+            // Find distance to neighbours
+            var d1 = Infinity,
+                d2 = Infinity;
+            if (i > 0) {
+              u.sub(p[i - 1], v);
+              d1 = u.length();
+            }
+            if (i < n - 1) {
+              u.sub(p[i + 1], v);
+              d2 = u.length();
+            }
+            var dmax = Math.max(d1, d2);
+
+            // Interpolate based on left/right distance deltas
+            if (dmax < Infinity) {
+              d1 = Math.abs(d1 - d);
+              d2 = Math.abs(d2 - d);
+              var dmin = Math.min(d1, d2);
+
+              var sign = d1 < d2 ? -1 : 1;
+              var w = .5 - dmin / (d1 + d2);
+              found = (i + sign * w) / (n - 1);
+            }
+            else {
+              found = i / (n - 1);
+            }
+          }
+        }
+
+        return Math.max(0, Math.min(1, found));
+      }
+
+      // Viewport camera/setup
+      mathbox
+        // Cartesian viewport
+        .viewport({
+          type: 'cartesian',
+          range: [[-1, 1], [-1, 1], [-1, 1]],
+          scale: [1, 1, 1],
+        })
+        .camera({
+          orbit: 3.5,
+          phi: τ/4,
+          theta: π/2,
+        })
+        .transition(300)
+
+        // Axes
+        .axis({
+          id: 'a',
+          axis: 0,
+          color: 0xa0a0a0,
+          ticks: 5,
+          lineWidth: 2,
+          size: .05,
+        })
+        .axis({
+          id: 'b',
+          axis: 2,
+          color: 0xa0a0a0,
+          ticks: 5,
+          lineWidth: 2,
+          size: .05,
+          zero: false,
+        })
+
+        // Grid
+        .grid({
+          axis: [0, 2],
+          color: 0xc0c0c0,
+          lineWidth: 1,
+        })
+
+        // Spline
+        .curve({
+          id: 'splineCurve',
+          n: splineData.length,
+          color: 0x909090,
+          expression: function (x, i) {
+            return splineData[i];
+          },
+          lineWidth: 5,
+        })
+        .curve({
+          id: 'controlPoints',
+          n: controlData.length,
+          data: controlData,
+          pointSize: 15,
+          points: true,
+          line: false,
+        })
+
+        // Roaming point
+        .curve({
+          n: 1,
+          id: 'roam',
+          color: 0x50c020,
+          pointSize: 20,
+          points: true,
+          line: false,
+          expression: function (d, i) {
+            var t = (+new Date())*.0003;
+            var x = Math.cos(t+Math.sin(t*.194));
+            var y = Math.sin(t*.741+Math.cos(t*.094));
+            return [x, 0, y];
+          },
+          zIndex: 20,
+        })
+
+        // Found point
+        .curve({
+          n: 1,
+          id: 'found',
+          color: 0xc02050,
+          pointSize: 20,
+          points: true,
+          line: false,
+          expression: function (d, i) {
+            return foundPoint;
+          },
+          zIndex: 20,
+        })
+
+      mathbox.world().loop().hookPreRender(function () {
+        var point = targetPoint = mathbox.get('#roam').expression(0, 0);
+        var v = new THREE.Vector3(point[0], point[1], point[2]);
+
+        var t = findT(splinePoints, v);
+        var p = spline.getPoint(t);
+
+
+        foundPoint = [p.x, p.y, p.z];
+      })
+
+      setTimeout(function () {
+        mathbox
+          .animate('camera', {
+            theta: .45,
+          }, {
+            duration: 3000,
+          })
+          .curve({
+            id: 'foundLink',
+            n: 2,
+            domain: [0, 1],
+            expression: function (x, i) {
+              var p = foundPoint;
+              var t = targetPoint;
+              var dx = p[0] - t[0];
+              var dy = p[2] - t[2];
+              var d = Math.sqrt(dx*dx + dy*dy);
+              return [p[0], x * d / 3, p[2]];
+            },
+            lineWidth: 2,
+            color: 0xc02050,
+          }, {
+            delay: 4000,
+          })
+          .clone('#splineCurve', {
+            expression: function (x, i) {
+              var p = splineData[i];
+              var t = targetPoint;
+              var dx = p[0] - t[0];
+              var dy = p[2] - t[2];
+              var d = Math.sqrt(dx*dx + dy*dy);
+              return [p[0], d / 3, p[2]];
+            },
+            color: 0x3090ff,
+          }, {
+            delay: 3000,
+            duration: 1000,
+          })
+
+      }, 3000);
+
+      setTimeout(function () {
+        mathbox
+          .surface({
+            n: 32,
+            domain: [[-1, 1], [-1, 1]],
+            expression: function (x, y, i, j) {
+              var p = [-x, 0, y];
+              var t = targetPoint;
+              var dx = p[0] - t[0];
+              var dy = p[2] - t[2];
+              var d = Math.sqrt(dx*dx + dy*dy);
+              return [p[0], d / 3, p[2]];
+            },
+            opacity: .75,
+          })
+      }, 9000);
+
+    });
+  });
+  </script>
+  <script type="text/javascript" charset="utf-8">
+    DomReady.ready(function () {
+      if (location.href.match(/^file:/)) {
+        document.getElementById('info').style.opacity = 1;
+        document.getElementById('info').innerHTML = "Sorry. This example does not work when accessed using file://. Please use an http:// host and try again.";
+      }
+    });
+  </script>
+
+  <style type="text/css" media="screen">
+    html, body { height: 100%; }
+    body { margin: 0; padding: 0 }
+    canvas { display: block }
+
+    #info {
+      position: absolute;
+      left: 50%;
+      bottom: 50px;
+      z-index: 20;
+
+      width: 300px;
+      margin-left: -150px;
+
+      padding: 25px;
+      background: rgba(0, 0, 0, .5);
+      color: #fff;
+
+      font-family: "Lucida Grande", sans-serif;
+      font-size: 16px;
+      text-align: center;
+
+      border-radius: 3px;
+      text-shadow: 0px 1px 0px rgba(0, 0, 0, .4);
+
+      opacity: 0;
+    }
+
+    #info kbd {
+      background: #aaa;
+
+      box-shadow: 0px 1px 1px rgba(0, 0, 0, .3);
+      border-radius: 3px;
+      padding: 3px;
+      margin: 3px;
+
+      font-family: inherit;
+    }
+  </style>
+
+</head>
+<body>
+  <div id="info"></div>
+</body>
+</html>

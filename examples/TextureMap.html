@@ -20,6 +20,9 @@
       '../shaders/snippets.glsl.html',
       '../resources/texture.png',
     ], function (assets) {
+      // Texture shift/scale (Three.js Texture object)
+      assets['texture'].repeat.set(2, 2);
+      assets['texture'].offset.set(-.5, -.5);
 
       // MathBox boilerplate
       var mathbox = window.mathbox = mathBox({

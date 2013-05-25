@@ -40192,14 +40192,26 @@ ThreeBox.preload.html = function (file, name, callback) {
     var match;
 
     // Insert javascript directly
-    if (match = res.match(/^<script[^>]*type=['"]text\/javascript['"][^>]*>([\s\S]+?)<\/script>$/m)) {
-      var script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.innerHTML = match[1];
-      document.body.appendChild(script);
+    while (match = res.match(/^(<script\s*>|<script[^>]*type=['"]text\/javascript['"][^>]*>)([\s\S]+?)<\/script>$/m)) {
+      try {
+        /*
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.innerHTML = match[2];
+        document.body.appendChild(script);
+        */
+        eval('(function () {' + match[2] + '})()');
+      }
+      catch (e) {
+        console.error(e);
+        console.error('While evaluating: ' + match[2]);
+      }
+
+      res = res.replace(match[0], '');
     }
+
     // Insert HTML via div
-    else {
+    if (res.replace(/\s*/g) != '') {
       var div = document.createElement('div');
       div.innerHTML = res;
       document.body.appendChild(div);
@@ -43937,9 +43949,16 @@ MathBox.Materials.prototype = {
     });
 
     if (type == 'uniforms') {
+      var uniforms = material.uniforms;
       if (options.map !== undefined) {
-        if (material.uniforms.texture) {
-          material.uniforms.texture.value = options.map;
+        if (uniforms.texture) {
+          uniforms.texture.value = options.map;
+        }
+        if (uniforms.offsetRepeat) {
+          var offset = options.map.offset;
+          var repeat = options.map.repeat;
+
+          uniforms.offsetRepeat.value.set(offset.x, offset.y, repeat.x, repeat.y);
         }
       }
       if (options.lineWidth !== undefined) {

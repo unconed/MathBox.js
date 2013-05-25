@@ -1340,9 +1340,16 @@ MathBox.Materials.prototype = {
     });
 
     if (type == 'uniforms') {
+      var uniforms = material.uniforms;
       if (options.map !== undefined) {
-        if (material.uniforms.texture) {
-          material.uniforms.texture.value = options.map;
+        if (uniforms.texture) {
+          uniforms.texture.value = options.map;
+        }
+        if (uniforms.offsetRepeat) {
+          var offset = options.map.offset;
+          var repeat = options.map.repeat;
+
+          uniforms.offsetRepeat.value.set(offset.x, offset.y, repeat.x, repeat.y);
         }
       }
       if (options.lineWidth !== undefined) {

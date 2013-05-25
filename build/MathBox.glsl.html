@@ -312,14 +312,17 @@ void getPositionDUDV(out vec3 positionOut, out vec3 positionDUOut, out vec3 posi
 <script type="application/x-glsl" id="vertexOutput">
 // Vertex shader: set GL vertex properties and varyings
 uniform float pointSize;
+
+uniform vec4 offsetRepeat;
 varying vec2 vUV;
+
 varying vec3 vViewPosition;
 
 void vertexOutput(in vec4 position, in vec3 viewPosition) {
   gl_Position = position;
   gl_PointSize = pointSize;
 
-  vUV = uv;
+  vUV = uv * offsetRepeat.zw + offsetRepeat.xy;
   vViewPosition = viewPosition;
 }
 </script>
