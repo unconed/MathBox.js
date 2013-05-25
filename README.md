@@ -249,6 +249,23 @@ Regular linear XYZ.
 })
 ```
 
+__Projective__  
+Applies a 4x4 homogeneous/projective transform.
+
+```javascript
+.viewport({
+  type: 'projective',
+  range: [[-1, 1], [-1, 1], [-1, 1]], // Range in X, Y, Z
+  scale: [1, 1, 1],                   // Scale in X, Y, Z
+  rotation: [0, 0, 0],                // Viewport rotation in Euler angles
+  position: [0, 0, 0],                // Viewport position in XYZ
+  projective: [[1, 0, 0, 0],          // 4x4 projective transform
+               [0, 1, 0, 0],
+               [0, 0, 1, 0],
+               [0, 0, 0, 1]],
+})
+```
+
 __Polar__  
 Polar coordinate grid in radians. X is angle, Y is radius, Z is ordinary depth.
 Also useful for visualizing complex operations in polar representation.

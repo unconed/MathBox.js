@@ -169,6 +169,16 @@ void mathToWorld(in vec3 positionIn, out vec3 positionOut) {
 
 </script>
 
+<script type="application/x-glsl" id="projectiveTransform">
+// Vertex shader: apply the projective viewport transform
+uniform mat4 projectiveTransform;
+
+void projective(in vec3 positionIn, out vec3 positionOut) {
+  vec4 pos4 = projectiveTransform * vec4(positionIn, 1.0);
+  positionOut = pos4.xyz / pos4.w;
+}
+</script>
+
 <script type="application/x-glsl" id="mathTransform">
 // Vertex shader: apply an arbitrary transform in math space
 uniform mat4 mathTransform;

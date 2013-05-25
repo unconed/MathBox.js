@@ -191,7 +191,19 @@ MathBox.ViewportPolar.prototype = _.extend(new MathBox.ViewportCartesian(null), 
 
   validatePolar: function (polar) {
     return Math.max(0, Math.min(1, +polar || 0));
-  }//,
+  },
+
+  validateFold: function (fold) {
+    return +fold || 0;
+  },
+
+  validatePower: function (power) {
+    return +power || 0;
+  },
+
+  validateHelix: function (helix) {
+    return +helix || 0;
+  },
 
 });
 

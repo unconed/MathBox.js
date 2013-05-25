@@ -46,6 +46,7 @@ src/renderables/Labels.js
 src/viewports/Viewport.js
 src/viewports/ViewportCartesian.js
 src/viewports/ViewportPolar.js
+src/viewports/ViewportProjective.js
 src/viewports/ViewportSphere.js
 "
 
