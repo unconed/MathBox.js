@@ -4327,7 +4327,7 @@ MathBox.Materials.prototype = {
 
     if (type == 'uniforms') {
       var uniforms = material.uniforms;
-      if (options.map !== undefined) {
+      if (options.map) {
         if (uniforms.texture) {
           uniforms.texture.value = options.map;
         }
