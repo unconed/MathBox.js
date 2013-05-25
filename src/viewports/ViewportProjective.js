@@ -8,7 +8,8 @@ MathBox.ViewportProjective = function (options) {
 
   // Prepare uniforms
   _.extend(this._uniforms, {
-    projectiveTransform: new THREE.Matrix4(),//,
+    projectiveTransform: new THREE.Matrix4(),
+    projectiveInverse: new THREE.Matrix4(),
   });
 };
 
@@ -39,12 +40,17 @@ MathBox.ViewportProjective.prototype = _.extend(new MathBox.ViewportCartesian(nu
   from: function (vector) {
     // Apply inverse viewport
     this.inverse.multiplyVector3(vector);
+
+    // Apply inverse projective transform
+    this._uniforms.projectiveInverse.multiplyVector3(vector);
   },
 
   update: function (stage) {
     var t = this._uniforms.projectiveTransform;
     var m = this.get('projective');
     t.set.apply(t, m[0].concat(m[1], m[2], m[3]));
+
+    this._uniforms.projectiveInverse.getInverse(t);
 
     MathBox.ViewportCartesian.prototype.update.call(this, stage);
   },
