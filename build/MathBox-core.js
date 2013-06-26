@@ -1473,7 +1473,7 @@ tQuery.World.registerInstance('mathBox', function (element, options) {
  */
 MathBox.Director = function (stage, script) {
   this._stage = stage;
-  this.script = script;
+  this.script = script || [];
   this.rollback = {};
   this.clocks = {};
 
