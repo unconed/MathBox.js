@@ -12,6 +12,15 @@
   <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
 
   <script type="text/javascript" charset="utf-8">
+    DomReady.ready(function () {
+      if (location.href.match(/^file:/)) {
+        document.getElementById('info').style.opacity = 1;
+        document.getElementById('info').innerHTML = "Sorry. This example does not work when accessed using file://. Please use an http:// host and try again.";
+      }
+    });
+  </script>
+
+  <script type="text/javascript" charset="utf-8">
   /**
    * Bootstrap
    */
@@ -98,15 +107,6 @@
     return Math.sin(t) * .75 + 2;
   }
 
-  </script>
-
-  <script type="text/javascript" charset="utf-8">
-    DomReady.ready(function () {
-      if (location.href.match(/^file:/)) {
-        document.getElementById('info').style.opacity = 1;
-        document.getElementById('info').innerHTML = "Sorry. This example does not work when accessed using file://. Please use an http:// host and try again.";
-      }
-    });
   </script>
 
   <style type="text/css" media="screen">

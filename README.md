@@ -20,13 +20,36 @@ Examples
 * [Bezier surface (slideshow)](http://acko.net/files/mathbox/MathBox.js/examples/BezierSurface.html)
 * [Complex numbers (slideshow)](http://acko.net/files/mathbox/MathBox.js/examples/ComplexNumbers.html)
 * [Complex exponentiation 4D -> 3D](http://acko.net/files/mathbox/MathBox.js/examples/ComplexExponentiation.html)
+* [Distance from a point to a curve](http://acko.net/files/mathbox/MathBox.js/examples/Distance.html)
 * [Surface/plane intersection](http://acko.net/files/mathbox/MathBox.js/examples/Intersections.html)
+* [Procedural landscape (slideshow)](http://acko.net/files/mathbox/MathBox.js/examples/Landscape.html)
 * [Rational function on the projective line](http://acko.net/files/mathbox/MathBox.js/examples/ProjectiveLine.html)
+* [Projective viewport transform](http://acko.net/files/mathbox/MathBox.js/examples/ProjectiveView.html)
 * [Warping cartesian into cylindrical coordinates](http://acko.net/files/mathbox/MathBox.js/examples/SurfaceWarp.html)
 * [Texture mapping a surface](http://acko.net/files/mathbox/MathBox.js/examples/TextureMap.html)
 * [Cross-eyed 3D](http://acko.net/files/mathbox/MathBox.js/examples/3D.html)
 
-Usage
+
+Try It Out
+----------
+
+You can try MathBox online right away. Simply open any of the examples above, or use this [empty template](http://acko.net/files/mathbox/MathBox.js/examples/Empty.html) and open the JavaScript console (Chrome: Ctrl-Alt-J / Cmd-Opt-J). You can interact with MathBox using the `mathbox` object and any of the methods documented below, for example:
+
+```javascript
+mathbox.grid();
+mathbox.curve({
+  id: 'my-curve',
+  domain: [-3, 3],
+  expression: function (x) { return Math.cos(x); },
+})
+mathbox.animate('#my-curve', {
+  color: 0x20c050,
+}, {
+  duration: 1000,
+});
+```
+
+Setup & Usage
 -----
 
 MathBox requires its library of GLSL shaders to be included in the DOM. You can either paste in the included `MathBox.glsl.html`, or use the included ThreeBox preloader with your favorite onReady mechanism:
@@ -37,13 +60,15 @@ DomReady.ready(function() {
     'MathBox.glsl.html',
   ], function () {
 
-    // do stuff with mathbox here
+    // Do stuff with MathBox here
 
   });
 });
 ```
 
-MathBox uses the ThreeBox tQuery boilerplate. Create a MathBox as follows and call .start() to begin rendering.
+Because shaders are loaded separately, *MathBox examples will not run over the file:// protocol*. You must set up a local or remote webserver, or paste MathBox.glsl.html into your HTML file directly, so you can skip the preloading. This is discouraged, as it will make upgrading harder.
+
+MathBox uses the ThreeBox/tQuery boilerplate. Create a MathBox as follows and call .start() to begin rendering.
 
 ```javascript
 var mathbox = mathBox({
@@ -57,7 +82,7 @@ var mathbox = mathBox(element, {
   // ...
 }).start();
 ```
-(which is equivalent to `tQuery.createWorld(options).mathBox(element, options)`).
+(which is equivalent to `tQuery.createWorld(options).mathBox(element, options).start()`).
 
 Then you call methods on the `mathbox` object to set up your scene. For example:
 
@@ -131,10 +156,10 @@ mathbox
 })
 ```
 
-Setup
+Configuration
 ----------
 
-All mathbox arguments are optional. The following options are available for setup in addition to the normal tQuery world options:
+All mathbox arguments are optional. The following options are available for configuration in addition to the normal tQuery world options:
 
 ```javascript
 {

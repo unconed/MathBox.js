@@ -157,6 +157,9 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         }.bind(this));
       }
 
+      // Don't remove singletons.
+      if (object.singleton) return;
+
       // Remove from mathbox (callback).
       var remove = function () {
         this._remove(object);
