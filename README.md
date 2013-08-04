@@ -332,12 +332,12 @@ For 3D graphs, you'll often want to move the camera around. For simplicity, the 
 By default the camera is positioned to face the X/Y plane at a distance of 3.5 units, which gives the default viewport a slight margin.
 
 ```javascript
-.camera{{
+.camera({
   orbit: 3.5,        // Distance from the center
   phi: τ/4,          // Longitude angle in XZ, in radians, relative to 0 degrees on the X axis
   theta: 0,          // Latitude angle towards Y, in radians, relative to the XZ plane.
   lookAt: [0, 0, 0], // Point of focus in space
-}};
+})
 ```
 
 Primitives
@@ -356,7 +356,7 @@ Axis
   tickScale: 10,     // Integer denoting the base for recursive division. 2 = binary, 10 = decimal
   arrow: true,       // Whether to include an arrow on the axis
   size: .07,         // Size of the arrow relative to the stage
-});
+})
 ```
 
 Bezier Curve
@@ -417,7 +417,7 @@ Grid
   ticks: [ 10, 10 ],      // Approximate number of ticks on axis (ticks are spaced at sensible units).
   tickUnit: [ 1, 1],      // Base unit for ticks on each axis. Set to π e.g. to space ticks at multiples of π.
   tickScale: [ 10, 10 ],  // Integer denoting the base for recursive division on each axis. 2 = binary, 10 = decimal
-});
+})
 ```
 
 Surface
