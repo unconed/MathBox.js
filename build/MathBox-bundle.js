@@ -44201,7 +44201,10 @@ MathBox.Director.prototype = {
         }
       }
       if (instant) {
-        animate = { delay: 0, duration: 0.00001 };
+        animate = { delay: 0, duration: 0 };
+        if (verb == 'animate') {
+          verb = 'set';
+        }
       }
 
       switch (verb) {
