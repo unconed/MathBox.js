@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Example: x^2 + y^2 = 1 for x/y is complex.</title>
+
+  <!--
+    This example shows the circle equation when both X and Y are complex.
+  -->
+
+  <script type="text/javascript" charset="utf-8" src="../vendor/domready.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
+
+  <script type="text/javascript" charset="utf-8">
+    DomReady.ready(function () {
+      if (location.href.match(/^file:/)) {
+        document.getElementById('info').style.opacity = 1;
+        document.getElementById('info').innerHTML = "Sorry. This example does not work when accessed using file://. Please use an http:// host and try again.";
+      }
+    });
+  </script>
+
+  <script type="text/javascript" charset="utf-8">
+  var cosine = 1;
+  var sine = 0;
+
+  /**
+   * Bootstrap
+   */
+  DomReady.ready(function() {
+    ThreeBox.preload([
+      '../shaders/snippets.glsl.html',
+    ], function () {
+
+      // MathBox boilerplate
+      var mathbox = window.mathbox = mathBox({
+        cameraControls: true,
+        cursor:         true,
+        controlClass:   ThreeBox.OrbitControls,
+        elementResize:  true,
+        fullscreen:     true,
+        screenshot:     true,
+        stats:          false,
+        scale:          1,
+      }).start();
+
+      // Viewport camera/setup
+      mathbox
+        // Cartesian viewport
+        .viewport({
+          type: 'cartesian',
+          range: [[-3, 3], [-3, 3], [-3, 3]],
+          scale: [1, 1, 1],
+        })
+        .camera({
+          orbit: 3.5,
+          phi: τ/4,
+          theta: 0,
+        })
+        .transition(500)
+
+        // Axes
+        .axis({
+          id: 'xreal',
+          axis: 0,
+          color: 0xa0a0a0,
+          ticks: 5,
+          lineWidth: 2,
+          size: .05,
+        })
+        .axis({
+          id: 'yreal',
+          axis: 1,
+          color: 0xa0a0a0,
+          ticks: 5,
+          lineWidth: 2,
+          size: .05,
+          zero: false,
+        })
+
+        // Grid
+        .grid({
+          id: 'xy',
+          axis: [0, 1],
+          ticks: [5, 5],
+          color: 0xb0b0b0,
+          lineWidth: 1,
+        })
+        .grid({
+          id: 'xz',
+          axis: [0, 2],
+          ticks: [5, 5],
+          color: 0xb0b0b0,
+          lineWidth: 1,
+        })
+
+        // Spline
+        .curve({
+          id: 'circle',
+          n: 64,
+          live: true,
+          domain: [-π, π],
+          expression: function (x, i) {
+            return [Math.cos(x), Math.sin(x), 0];
+          },
+          lineWidth: 5,
+        })
+
+      mathbox.world().loop().hookPreRender(function () {
+        var th = angle();
+        cosine = Math.cos(th);
+        sine = Math.sin(th);
+      });
+
+      // Director
+      var director = window.director = new MathBox.Director(mathbox, script);
+
+      // Show info if not iframed.
+      if (top == window) {
+        document.getElementById('info').style.opacity = 1;
+      }
+
+      // Arrow controls
+      // Controls for stand-alone
+      window.addEventListener('touchstart', function (e) {
+        director.forward();
+        document.getElementById('info').style.opacity = '0';
+      });
+      window.addEventListener('keydown', function (e) {
+        if (e.keyCode == 38 || e.keyCode == 37) director.back();
+        else if (e.keyCode == 40 || e.keyCode == 39) director.forward();
+        else {
+          return;
+        }
+
+        document.getElementById('info').style.opacity = 0;
+      });
+    });
+  });
+
+  /**
+   * Custom helpers
+   */
+  function square(c) {
+    return [c[0]*c[0] - c[1]*c[1], 2*c[0]*c[1]];
+  }
+
+  function sqrt(c) {
+    var r = Math.sqrt(c[0]*c[0] + c[1]*c[1]);
+    var th = Math.atan2(c[1], c[0]);
+    r = Math.sqrt(r);
+    th = th / 2;
+    return [Math.cos(th)*r, Math.sin(th)*r];
+  }
+
+  function add(c1, c2) {
+    return [c1[0] + c2[0], c1[1] + c2[1]];
+  }
+
+  function mul(c1, c2) {
+    return [c1[0]*c2[0] - c1[1]*c2[1], c1[0]*c2[1] + c2[0]*c1[1]];
+  }
+
+  function angle() {
+    var t = Math.max(0, (director.clock(2) - 5) * .1);
+    return t<.5 ? t*t : t-.25;
+  }
+
+  function project(c) {
+    return [c[0] + c[1] * cosine, c[2], c[3] + c[1] * sine];
+  }
+
+  // Script
+  var script = [
+
+    [
+      ['animate', 'camera', {
+        theta: .6,
+      }, {
+        delay: 0,
+        duration: 2000,
+      }],
+      ['animate', 'camera', {
+        phi: τ/4+1,
+      }, {
+        delay: 2500,
+        duration: 3000,
+      }],
+      ['add', 'curve', {
+        id: 'hyperbolaX1',
+        n: 64,
+        live: true,
+        domain: [-2, 2],
+        color: 0x50c020,
+        expression: function (x, i) {
+          return project([(Math.exp(x) + Math.exp(-x))/2, 0, 0, (Math.exp(x) - Math.exp(-x))/2]);
+        },
+        lineWidth: 5,
+      }, {
+        delay: 2000,
+      }],
+      ['add', 'curve', {
+        id: 'hyperbolaX2',
+        n: 64,
+        live: true,
+        domain: [-2, 2],
+        color: 0x50c020,
+        expression: function (x, i) {
+          return project([-(Math.exp(x) + Math.exp(-x))/2, 0, 0, (Math.exp(x) - Math.exp(-x))/2]);
+        },
+        lineWidth: 5,
+      }, {
+        delay: 2000,
+      }],
+    ],
+
+    [
+      ['animate', 'camera', {
+        phi: τ/4+3.14+1.57,
+        theta: .2,
+      }, {
+        delay: 500,
+        duration: 5000,
+      }],
+      ['add', 'curve', {
+        id: 'hyperbolaX1',
+        n: 64,
+        live: true,
+        domain: [-2, 2],
+        color: 0xc02050,
+        expression: function (x, i) {
+          return project([0, (Math.exp(x) - Math.exp(-x))/2, (Math.exp(x) + Math.exp(-x))/2, 0]);
+        },
+        lineWidth: 5,
+      }, {
+        delay: 0,
+      }],
+      ['add', 'curve', {
+        id: 'hyperbolaX2',
+        n: 64,
+        live: true,
+        domain: [-2, 2],
+        color: 0xc02050,
+        expression: function (x, i) {
+          return project([0, (Math.exp(x) - Math.exp(-x))/2, -(Math.exp(x) + Math.exp(-x))/2, 0]);
+        },
+        lineWidth: 5,
+      }, {
+        delay: 0,
+      }],
+    ],
+
+    [
+      ['animate', 'camera', {
+        phi: τ/4+τ,
+      }, {
+        delay: 1000,
+        duration: 3000,
+      }],
+      ['add', 'surface', {
+        id: 'green1',
+        color: 0x50c020,
+        n: [41, 41],
+        line: true,
+        live: true,
+        opacity: .75,
+        domain: [[-2, -.001], [.001, 2]],
+        expression: function (x, y, i, j) {
+          var c = sqrt(add(square([x, y]), [-1, 0]));
+          return project([x, y, -c[1], -c[0]]);
+        },
+        zIndex: -1,
+      }],
+      ['add', 'surface', {
+        id: 'green2',
+        color: 0x50c020,
+        n: [41, 41],
+        line: true,
+        live: true,
+        opacity: .75,
+        domain: [[.001, 2], [.001, 2]],
+        expression: function (x, y, i, j) {
+          var c = sqrt(add(square([x, y]), [-1, 0]));
+          return project([x, y, -c[1], -c[0]]);
+        },
+        zIndex: -1,
+      }],
+      ['add', 'surface', {
+        id: 'green3',
+        color: 0x50c020,
+        n: [41, 41],
+        line: true,
+        live: true,
+        opacity: .75,
+        domain: [[-2, -.001], [.001, 2]],
+        expression: function (x, y, i, j) {
+          var c = sqrt(add(square([x, y]), [-1, 0]));
+          return project([x, y, c[1], c[0]]);
+        },
+        zIndex: -1,
+      }],
+      ['add', 'surface', {
+        id: 'green4',
+        color: 0x50c020,
+        n: [41, 41],
+        line: true,
+        live: true,
+        opacity: .75,
+        domain: [[.001, 2], [.001, 2]],
+        expression: function (x, y, i, j) {
+          var c = sqrt(add(square([x, y]), [-1, 0]));
+          return project([x, y, c[1], c[0]]);
+        },
+        zIndex: -1,
+      }],
+    ],
+
+    [
+      ['animate', 'camera', {
+        phi: τ/4+τ*1.5,
+      }, {
+        delay: 1000,
+        duration: 3000,
+      }],
+      ['add', 'surface', {
+        id: 'purple1',
+        color: 0x5020c0,
+        n: [41, 41],
+        line: true,
+        live: true,
+        opacity: .75,
+        domain: [[-2, -.001], [-2, -.001]],
+        expression: function (x, y, i, j) {
+          var c = sqrt(add(square([x, y]), [-1, 0]));
+          return project([x, y, -c[1], -c[0]]);
+        },
+        zIndex: -1,
+      }],
+      ['add', 'surface', {
+        id: 'purple2',
+        color: 0x5020c0,
+        n: [41, 41],
+        line: true,
+        live: true,
+        opacity: .75,
+        domain: [[.001, 2], [-2, -.001]],
+        expression: function (x, y, i, j) {
+          var c = sqrt(add(square([x, y]), [-1, 0]));
+          return project([x, y, -c[1], -c[0]]);
+        },
+        zIndex: -1,
+      }],
+      ['add', 'surface', {
+        id: 'purple3',
+        color: 0x5020c0,
+        n: [41, 41],
+        line: true,
+        live: true,
+        opacity: .75,
+        domain: [[-2, -.001], [-2, -.001]],
+        expression: function (x, y, i, j) {
+          var c = sqrt(add(square([x, y]), [-1, 0]));
+          return project([x, y, c[1], c[0]]);
+        },
+        zIndex: -1,
+      }],
+      ['add', 'surface', {
+        id: 'purple4',
+        color: 0x5020c0,
+        n: [41, 41],
+        line: true,
+        live: true,
+        opacity: .75,
+        domain: [[.001, 2], [-2, -.001]],
+        expression: function (x, y, i, j) {
+          var c = sqrt(add(square([x, y]), [-1, 0]));
+          return project([x, y, c[1], c[0]]);
+        },
+        zIndex: -1,
+      }],
+    ],
+
+  ];
+
+  </script>
+
+  <style type="text/css" media="screen">
+    html, body { height: 100%; }
+    body { margin: 0; padding: 0 }
+    canvas { display: block }
+
+    #info {
+      position: absolute;
+      left: 50%;
+      bottom: 50px;
+      z-index: 20;
+
+      width: 300px;
+      margin-left: -150px;
+
+      padding: 25px;
+      background: rgba(0, 0, 0, .5);
+      color: #fff;
+
+      font-family: "Lucida Grande", sans-serif;
+      font-size: 16px;
+      text-align: center;
+
+      border-radius: 3px;
+      text-shadow: 0px 1px 0px rgba(0, 0, 0, .4);
+
+      opacity: 0;
+
+      -webkit-transition: opacity 300ms ease-in-out;
+      -moz-transition: opacity 300ms ease-in-out;
+      transition: opacity 300ms ease-in-out;
+    }
+
+    #info kbd {
+      background: #aaa;
+      box-shadow: 0px 1px 1px rgba(0, 0, 0, .3);
+      border-radius: 3px;
+      padding: 3px;
+      margin: 3px;
+
+      font-family: inherit;
+    }
+  </style>
+
+</head>
+<body>
+  <div id="info">Use the <kbd>←</kbd><kbd>→</kbd> keys to step through.</div>
+</body>
+</html>

@@ -80,7 +80,7 @@ MathBox.Director.prototype = {
       case 'set':
         targets = stage.select(selector);
         _.each(targets, function (primitive) {
-          var duration = Math.min(300, (animate && (animate.duration !== undefined)) ? animate.duration : 300);
+          var duration = Math.min(300, (animate && (animate.duration !== undefined)) ? animate.duration : 0);
           inverse.push([
             verb,
             primitive.singleton || primitive.get('sequence'),
@@ -97,7 +97,7 @@ MathBox.Director.prototype = {
   /**
    * Apply the given script step.
    */
-  apply: function (step, rollback, instant) {
+  apply: function (step, rollback, instant, skipping) {
     var stage = this._stage;
 
     _.each(step, function (op) {
@@ -114,12 +114,15 @@ MathBox.Director.prototype = {
         Array.prototype.splice.apply(rollback, args);
       }
 
-      if (instant) {
+      if (skipping) {
         if (animate) {
           animate = _.extend({}, animate);
           animate.delay = 0;
           animate.duration = animate.duration / 2;
         }
+      }
+      if (instant) {
+        animate = { delay: 0, duration: 0.00001 };
       }
 
       switch (verb) {
@@ -233,7 +236,7 @@ MathBox.Director.prototype = {
     this.step++;
 
     var apply = function () {
-      this.apply(step, rollback, instant || this.skipping());
+      this.apply(step, rollback, instant, !instant ? this.skipping() : false);
 
       this.clock(this.step, true);
 

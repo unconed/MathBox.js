@@ -20,6 +20,8 @@ Examples
 * [Bezier surface (slideshow)](http://acko.net/files/mathbox/MathBox.js/examples/BezierSurface.html)
 * [Complex numbers (slideshow)](http://acko.net/files/mathbox/MathBox.js/examples/ComplexNumbers.html)
 * [Complex exponentiation 4D -> 3D](http://acko.net/files/mathbox/MathBox.js/examples/ComplexExponentiation.html)
+* [Circle equation (x^2 + y^2 = 1) complex 4D -> 3D](http://acko.net/files/mathbox/MathBox.js/examples/ComplexCircle.html)
+* [Circle equation (x^2 + y^2 = 1) complex 4D -> 3D (animated projection)](http://acko.net/files/mathbox/MathBox.js/examples/ComplexCircleAlt.html)
 * [Distance from a point to a curve](http://acko.net/files/mathbox/MathBox.js/examples/Distance.html)
 * [Surface/plane intersection](http://acko.net/files/mathbox/MathBox.js/examples/Intersections.html)
 * [Procedural landscape (slideshow)](http://acko.net/files/mathbox/MathBox.js/examples/Landscape.html)
