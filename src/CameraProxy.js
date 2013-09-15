@@ -4,8 +4,8 @@
 MathBox.CameraProxy = function (world, options) {
 
   this.set({
-    orbit: options.orbit || 3.5,
-    phi: options.phi || τ/4,
+    orbit: options.orbit === undefined ? 3.5 : options.orbit,
+    phi: options.phi === undefined ? τ/4 : options.phi,
     theta: options.theta || 0,
     lookAt: options.lookAt || [0, 0, 0],
   });
@@ -27,6 +27,21 @@ MathBox.CameraProxy = function (world, options) {
     controls.update();
   });
   controls.update();
+
+  this.update = function () {
+
+    this.set({
+      orbit: controls.orbit,
+      phi: controls.phi,
+      theta: controls.theta,
+    }, null, true);
+
+    var l = this.get('lookAt');
+    l[0] = controls.lookAt.x;
+    l[1] = controls.lookAt.y;
+    l[2] = controls.lookAt.z;
+
+  };
 }
 
 MathBox.Attributes.mixin(MathBox.CameraProxy);
