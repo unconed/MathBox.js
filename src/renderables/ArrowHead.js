@@ -76,7 +76,7 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     this.normal.normalize();
 
     // Prepare binormal
-    var bi = this.bi.cross(this.normal, this.diff);
+    var bi = this.bi.cross(this.normal, this.diff).normalize();
 
     // Renormalize axes.
     var normal = this.normal.cross(this.bi, this.diff);
