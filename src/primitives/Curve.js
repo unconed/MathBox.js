@@ -92,11 +92,22 @@ MathBox.Curve.prototype = _.extend(new MathBox.Primitive(null), {
       }
 
       // Allow both parametric (array) and functional (value) style.
-      if (!(p instanceof Array)) p = [x, p, 0];
-      p = p.concat([0, 0, 0]);
+      var px = 0,
+          py = 0,
+          pz = 0;
+      if (!(p instanceof Array)) {
+        px = i;
+        py = +p;
+      }
+      else {
+        var l = p.length;
+        if (l > 0) px = p[0];
+        if (l > 1) py = p[1];
+        if (l > 2) pz = p[2];
+      }
 
       // Update point
-      vertices[i].set.apply(vertices[i], p);
+      vertices[i].set(px, py, pz);
 
       x += step;
     }.bind(this));

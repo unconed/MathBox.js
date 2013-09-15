@@ -72,10 +72,22 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
         }
 
         // Allow both parametric (array) and functional (value) style.
-        if (!(p instanceof Array)) p = [i, p, j];
-        p = p.concat([0, 0, 0]);
+        var px = 0,
+            py = 0,
+            pz = 0;
+        if (!(p instanceof Array)) {
+          px = i;
+          py = +p;
+          pz = 0;
+        }
+        else {
+          var l = p.length;
+          if (l > 0) px = p[0];
+          if (l > 1) py = p[1];
+          if (l > 2) pz = p[2];
+        }
 
-        points.push(p);
+        points.push([px, py, pz]);
       }.bind(this));
     }.bind(this));
 

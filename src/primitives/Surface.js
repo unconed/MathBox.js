@@ -133,11 +133,23 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
         }
 
         // Allow both parametric (array) and functional (value) style.
-        if (!(p instanceof Array)) p = [x, p, y];
-        p = p.concat([0, 0, 0]);
+        var px = 0,
+            py = 0,
+            pz = 0;
+        if (!(p instanceof Array)) {
+          px = x;
+          py = +p;
+          pz = y;
+        }
+        else {
+          var l = p.length;
+          if (l > 0) px = p[0];
+          if (l > 1) py = p[1];
+          if (l > 2) pz = p[2];
+        }
 
         // Update point
-        vertices[o].set.apply(vertices[o], p);
+        vertices[o].set(px, py, pz);
 
         x += stepX;
         o++;

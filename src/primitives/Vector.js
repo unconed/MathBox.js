@@ -22,6 +22,9 @@ MathBox.Vector = function (options) {
   });
 };
 
+MathBox.Vector.vLast = new THREE.Vector3(),
+MathBox.Vector.vCurrent = new THREE.Vector3();
+
 MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
   defaults: function () {
@@ -105,9 +108,6 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         scale = this.style.get('mathScale');
 
     // Find necessary foreshortening factors so line does not stick out through the arrowhead.
-    var last = new THREE.Vector3(),
-        current = new THREE.Vector3();
-
     var j = 0, k = 0;
     _.loop(n * 2, function (i) {
       if (data && (data[i] !== undefined)) {
@@ -120,15 +120,30 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
       }
 
       // Allow both parametric (array) and functional (value) style.
-      if (!(p instanceof Array)) p = [i, p, 0];
-      p = p.concat([0, 0, 0]);
+      var px = 0,
+          py = 0,
+          pz = 0;
+      if (!(p instanceof Array)) {
+        px = i;
+        py = +p;
+        pz = 0;
+      }
+      else {
+        var l = p.length;
+        if (l > 0) px = p[0];
+        if (l > 1) py = p[1];
+        if (l > 2) pz = p[2];
+      }
 
       // Update point
-      points[i].set.apply(points[i], p);
+      points[i].set(px, py, pz);
 
       // Shorten line segment to make room for arrow
-      vertices[i].set.apply(vertices[i], p);
+      vertices[i].set(px, py, pz);
       if (viewport && arrow && (i % 2 == 1)) {
+        var last = MathBox.Vector.vLast;
+        var current = MathBox.Vector.vCurrent;
+
         // Find vector's world-space length
         current.copy(vertices[i]);
         last.copy(vertices[i-1]);
