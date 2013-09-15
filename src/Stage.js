@@ -70,7 +70,10 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         height = this.height,
         speed = this._speed;
 
-    // Apply running animations.
+    // Update camera proxy object to grab user-changed coordinates.
+    this.cameraProxy.update();
+
+    // Apply running animations (incl overriding camera).
     var now = +new Date();
     if (!this.last) {
       this.last = now - 1000/60;
@@ -377,10 +380,10 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         speed = this._speed;
 
     if (animate === true) animate = {};
-    if (auto || force || (animate && (animate.delay || animate.duration))) {
-      animate = _.extend({ delay: 0, duration: auto || 0 }, animate || {});
+    if (auto || force || (animate && (animate.delay || animate.duration || animate.hold))) {
+      animate = _.extend({ delay: 0, duration: auto || 0, hold: 0 }, animate || {});
     }
-    if (animate && (animate.delay || animate.duration)) {
+    if (animate && (animate.delay || animate.duration || animate.hold)) {
       return animate;
     }
   },
@@ -396,14 +399,24 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
     if (options.style) {
       _.each(this.select(selector), function (primitive) {
-        animator.animate(primitive.style, options.style, animate);
+        if (animate) {
+          animator.animate(primitive.style, options.style, animate);
+        }
+        else {
+          primitive.style.set(options.style);
+        }
       });
       options = _.extend({}, options);
       delete options.style;
     }
 
     _.each(this.select(selector), function (primitive) {
-      animator.animate(primitive, options, animate);
+      if (animate) {
+        animator.animate(primitive, options, animate);
+      }
+      else {
+        primitive.set(options);
+      }
     });
 
     return this;
@@ -446,12 +459,12 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
   /**
    * Hurry primitives currently being animated.
    */
-  hurry: function (selector, keys, limit) {
+  hurry: function (selector, keys, factor) {
     var animator = this.animator;
 
     _.each(this.select(selector, true), function (primitive) {
-      animator.hurry(primitive, keys, limit);
-      primitive.style && animator.hurry(primitive.style, keys, limit);
+      animator.hurry(primitive, keys, factor);
+      primitive.style && animator.hurry(primitive.style, keys, factor);
     });
 
     return this;

@@ -128,6 +128,16 @@ MathBox.Animator.prototype = {
                         object, key, value, options.duration, options.callback, options.ease);
       queue.push(animation);
 
+      // Queue hold
+      if (options.hold) {
+        var hold = new MathBox.Animator.Delay(object, key, options.hold);
+        queue.push(hold);
+
+        if (object.__animations++ == 0) {
+          this.active.push(object);
+        }
+      }
+
       // Keep track of animating objects
       if (object.__animations++ == 0) {
         this.active.push(object);
@@ -221,7 +231,8 @@ MathBox.Animator.Delay.prototype = {
   },
 
   hurry: function (factor) {
-    this.duration -= (1 - this.fraction) * this.duration * (factor - 1);
+    this.duration = this.duration * this.fraction
+                  + this.duration * (1 - this.fraction) / factor;
   },
 
   extra: function () {
@@ -382,7 +393,8 @@ MathBox.Animator.Animation.prototype = {
   },
 
   hurry: function (factor) {
-    this.duration -= (1 - this.fraction) * this.duration * (factor - 1);
+    this.duration = this.duration * this.fraction
+                  + this.duration * (1 - this.fraction) / factor;
   },
 
   skip: function () {

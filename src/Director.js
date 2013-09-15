@@ -47,9 +47,19 @@ MathBox.Director.prototype = {
 
     var verb = op[0],
         selector = op[1],
-        options = op[2],
+        options = op[2] || {},
         animate = op[3],
         primitive;
+
+    if (verb == 'remove') {
+      animate = options;
+    }
+
+    // Reverse timings
+    var duration = (animate && animate.duration !== undefined) ? animate.duration / 4 : 0;
+    var delay = (animate && animate.delay !== undefined) ? animate.delay / 4 : 0;
+    var hold = (animate && animate.hold !== undefined) ? animate.hold / 4 : 0;
+    animate = { delay: hold, duration: duration, hold: delay };
 
     switch (verb) {
       case 'add':
@@ -61,6 +71,7 @@ MathBox.Director.prototype = {
           inverse.push([
             'remove',
             options.sequence || (MathBox.Primitive.sequence + 1 + i),
+            animate,
           ]);
         })
         break;
@@ -72,6 +83,7 @@ MathBox.Director.prototype = {
             'add',
             primitive.type(),
             stage.get(primitive),
+            animate,
           ]);
         })
         break;
@@ -79,19 +91,146 @@ MathBox.Director.prototype = {
       case 'animate':
       case 'set':
         targets = stage.select(selector);
+
         _.each(targets, function (primitive) {
-          var duration = Math.min(300, (animate && (animate.duration !== undefined)) ? animate.duration : 0);
+          var props = stage.get(primitive);
+          var reverted = {};
+          for (i in options) {
+            if (props.style && props.style[i]) reverted[i] = props.style[i];
+            else reverted[i] = props[i];
+          }
+//          log('reverted', props, options, reverted)
+
           inverse.push([
             verb,
             primitive.singleton || primitive.get('sequence'),
-            stage.get(primitive),
-            { duration: duration },
+            reverted,
+            animate,
           ]);
         });
         break;
     }
 
     return inverse;
+  },
+
+  /**
+   * Correct reversed delays by measuring total track length and adding the missing final / reversed initial delay.
+   */
+  invertDelay: function (rollback) {
+
+    // Get property names for op
+    function getProps(op) {
+      var verb = op[0],
+          options = op[2] || {};
+
+      var props = ['opacity'];
+      if (verb == 'animate') {
+        props = [];
+        for (i in options) {
+          if (i == 'style') {
+            for (j in options.style) {
+              props.push(j);
+            }
+          }
+          else {
+            props.push(i);
+          }
+        }
+      }
+//      log('getProps', op, props);
+      return props;
+    }
+
+    // New rollback
+    var out = [], i;
+
+    // Collect lengths
+    var lengths = {};
+    rollback.forEach(function (op) {
+      var verb = op[0],
+          selector = op[1] || '',
+          options = op[2] || {},
+          animate = op[3] || {};
+
+      if (verb == 'set') return null;
+      if (verb == 'add') {
+        selector = options.sequence;
+      }
+      if (verb == 'remove') {
+        animate = options;
+      }
+
+      var props = getProps(op);
+      props.forEach(function (prop) {
+        var key = [selector,prop].join('.');
+        if (!lengths[key]) lengths[key] = [];
+        animate = animate || {};
+        lengths[key].push((animate.delay||0) + (animate.duration||0) + (animate.hold||0));
+      });
+    });
+
+    // Get longest track
+    var max = 0;
+    for (i in lengths) {
+      var length = lengths[i] = lengths[i].reduce(function (a, b) { return a + b; });
+      max = Math.max(max, length);
+    }
+//    log('max', max);
+
+    // Assign reverse timings
+    rollback.forEach(function (op) {
+//      log('rollback', op);
+      var verb = op[0],
+          selector = op[1] || '',
+          options = op[2] || {},
+          animate = op[3] || {},
+          type;
+
+      if (verb == 'set') {
+        return out.push(op);
+      }
+      if (verb == 'add') {
+        type = selector;
+        selector = options.sequence;
+      }
+      if (verb == 'remove') {
+        animate = options;
+      }
+
+      var props = getProps(op);
+      props.forEach(function (prop) {
+        var key = [selector,prop].join('.');
+
+        var delay = (animate.delay || 0);
+        var duration = animate.duration || 0;
+        var hold = (animate.hold || 0);
+
+        if (lengths[key] !== undefined) {
+          delay += max - lengths[key];
+//          log('animate y', delay, duration, hold);
+          delete lengths[key];
+        }
+        else {
+//          log('animate n', delay, duration, hold);
+        }
+        animate = { delay: delay, duration: duration, hold: hold };
+
+        if (verb == 'add') {
+          out.push([verb, type, options, animate]);
+        }
+        if (verb == 'remove') {
+          out.push([verb, selector, animate]);
+        }
+        else {
+          var o = {};
+          o[prop] = (options.style && options.style[prop] !== undefined) ? options.style[prop] : options[prop];
+          out.push([verb, selector, o, animate]);
+        }
+      });
+    });
+
+    return out;
   },
 
   /**
@@ -109,6 +248,7 @@ MathBox.Director.prototype = {
       if (verb == 'remove') animate = options;
 
       if (rollback) {
+//        console.log('inverting', op);
         var inverse = this.invert(op);
         var args = [0, 0].concat(inverse);
         Array.prototype.splice.apply(rollback, args);
@@ -117,12 +257,13 @@ MathBox.Director.prototype = {
       if (skipping) {
         if (animate) {
           animate = _.extend({}, animate);
-          animate.delay = 0;
+          animate.delay = animate.delay / 2;
           animate.duration = animate.duration / 2;
+          animate.hold = animate.hold / 2;
         }
       }
       if (instant) {
-        animate = { delay: 0, duration: 0 };
+        animate = { delay: 0, duration: 0, hold: 0 };
         if (verb == 'animate') {
           verb = 'set';
         }
@@ -234,16 +375,17 @@ MathBox.Director.prototype = {
   forward: function (instant, delay) {
     if (this.step >= this.script.length) return;
 
-    var step = this.script[this.step];
-    var rollback = this.rollback[this.step] = [];
+    var index = this.step;
+    var step = this.script[index];
+    var rollback = this.rollback[index] = [];
     this.step++;
 
     var apply = function () {
       this.apply(step, rollback, instant, !instant ? this.skipping() : false);
+      this.rollback[index] = this.invertDelay(rollback);
 
-      this.clock(this.step, true);
-
-      this.emit('go', this.step, 1);
+      this.clock(index + 1, true);
+      this.emit('go', index + 1, 1);
     }.bind(this);
 
     if (delay) {
@@ -263,14 +405,14 @@ MathBox.Director.prototype = {
     if (this.step <= 0) return;
 
     this.step--;
-    var step = this.script[this.step];
-    var rollback = this.rollback[this.step];
+    var index = this.step;
+    var rollback = this.rollback[index];
 
     var apply = function () {
       this.apply(rollback, null, instant || this.skipping());
-      delete this.rollback[this.step];
+      delete this.rollback[index];
 
-      this.emit('go', this.step, -1);
+      this.emit('go', index, -1);
     }.bind(this);
 
     if (delay) {
