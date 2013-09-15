@@ -6,6 +6,12 @@ MathBox.Axis = function (options) {
   if (options === null) return;
 
   MathBox.Primitive.call(this, options);
+
+  this.on('change', function (changed) {
+    if (changed.size !== undefined) {
+      this.arrow && this.arrow.set('size', changed.size);
+    }
+  });
 };
 
 MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
