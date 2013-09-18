@@ -122,7 +122,7 @@ MathBox.Renderable.prototype = {
       if (changed.doubleSided !== undefined || changed.flipSided !== undefined) {
         // Set double sided / culling order.
         this.material.side = options.doubleSided ? THREE.DoubleSide :
-                             THREE.FrontSide;
+                             options.flipSided ? THREE.BackSide : THREE.FrontSide;
         options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };
         this.material.applyUniforms(options);
       }
