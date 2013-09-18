@@ -50,8 +50,10 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
   adjust: function (viewport) {
     var options = this.get();
 
+    var visible = this.style.get('opacity') > 0;
+
     // Vector foreshortening requires live to be always-on
-    (options.arrow || options.live) && this.calculate(viewport);
+    visible && (options.arrow || options.live) && this.calculate(viewport);
     _.each(this.arrows, function (arrow) {
       arrow.show(options.arrow);
     });
