@@ -96,7 +96,7 @@ MathBox.Director.prototype = {
           var props = stage.get(primitive);
           var reverted = {};
           for (i in options) {
-            if (props.style && props.style[i]) reverted[i] = props.style[i];
+            if (props.style && props.style[i] !== undefined) reverted[i] = props.style[i];
             else reverted[i] = props[i];
           }
 //          log('reverted', props, options, reverted)
