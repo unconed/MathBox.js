@@ -56,7 +56,7 @@ MathBox.Bezier.prototype = _.extend(new MathBox.Curve(null), {
           py = 0,
           pz = 0;
       if (!(p instanceof Array)) {
-        px = i;
+        px = x;
         py = +p;
       }
       else {

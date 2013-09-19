@@ -78,7 +78,7 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
         if (!(p instanceof Array)) {
           px = i;
           py = +p;
-          pz = 0;
+          pz = j;
         }
         else {
           var l = p.length;
