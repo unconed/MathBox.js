@@ -16798,6 +16798,8 @@ THREE.WebGLRenderer = function ( parameters ) {
 	var _gl;
 
 	var _glExtensionTextureFloat;
+	var _glExtensionFloatLinear;
+	var _glExtensionHalfFloatLinear;
 	var _glExtensionStandardDerivatives;
 	var _glExtensionTextureFilterAnisotropic;
 	var _glExtensionCompressedTextureS3TC;
@@ -23667,6 +23669,9 @@ THREE.WebGLRenderer = function ( parameters ) {
 		}
 
 		_glExtensionTextureFloat = _gl.getExtension( 'OES_texture_float' );
+		_glExtensionFloatLinear = _gl.getExtension( 'OES_texture_float_linear' );
+		_glExtensionHalfFloatLinear = _gl.getExtension( 'OES_texture_half_float_linear' );
+
 		_glExtensionStandardDerivatives = _gl.getExtension( 'OES_standard_derivatives' );
 
 		_glExtensionTextureFilterAnisotropic = _gl.getExtension( 'EXT_texture_filter_anisotropic' ) ||
