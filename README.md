@@ -334,12 +334,12 @@ For 3D graphs, you'll often want to move the camera around. For simplicity, the 
 By default the camera is positioned to face the X/Y plane at a distance of 3.5 units, which gives the default viewport a slight margin.
 
 ```javascript
-.camera{{
+.camera({
   orbit: 3.5,        // Distance from the center
   phi: τ/4,          // Longitude angle in XZ, in radians, relative to 0 degrees on the X axis
   theta: 0,          // Latitude angle towards Y, in radians, relative to the XZ plane.
   lookAt: [0, 0, 0], // Point of focus in space
-}};
+});
 ```
 
 Primitives
