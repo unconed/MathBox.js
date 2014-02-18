@@ -16974,6 +16974,8 @@ THREE.WebGLRenderer = function ( parameters ) {
 	var _gl;
 
 	var _glExtensionTextureFloat;
+	var _glExtensionFloatLinear;
+	var _glExtensionHalfFloatLinear;
 	var _glExtensionStandardDerivatives;
 	var _glExtensionTextureFilterAnisotropic;
 	var _glExtensionCompressedTextureS3TC;
@@ -23843,6 +23845,9 @@ THREE.WebGLRenderer = function ( parameters ) {
 		}
 
 		_glExtensionTextureFloat = _gl.getExtension( 'OES_texture_float' );
+		_glExtensionFloatLinear = _gl.getExtension( 'OES_texture_float_linear' );
+		_glExtensionHalfFloatLinear = _gl.getExtension( 'OES_texture_half_float_linear' );
+
 		_glExtensionStandardDerivatives = _gl.getExtension( 'OES_standard_derivatives' );
 
 		_glExtensionTextureFilterAnisotropic = _gl.getExtension( 'EXT_texture_filter_anisotropic' ) ||
@@ -42843,6 +42848,16 @@ MathBox.Animator.prototype = {
                         object, key, value, options.duration, options.callback, options.ease);
       queue.push(animation);
 
+      // Queue hold
+      if (options.hold) {
+        var hold = new MathBox.Animator.Delay(object, key, options.hold);
+        queue.push(hold);
+
+        if (object.__animations++ == 0) {
+          this.active.push(object);
+        }
+      }
+
       // Keep track of animating objects
       if (object.__animations++ == 0) {
         this.active.push(object);
@@ -42936,7 +42951,8 @@ MathBox.Animator.Delay.prototype = {
   },
 
   hurry: function (factor) {
-    this.duration -= (1 - this.fraction) * this.duration * (factor - 1);
+    this.duration = this.duration * this.fraction
+                  + this.duration * (1 - this.fraction) / factor;
   },
 
   extra: function () {
@@ -43097,7 +43113,8 @@ MathBox.Animator.Animation.prototype = {
   },
 
   hurry: function (factor) {
-    this.duration -= (1 - this.fraction) * this.duration * (factor - 1);
+    this.duration = this.duration * this.fraction
+                  + this.duration * (1 - this.fraction) / factor;
   },
 
   skip: function () {
@@ -43195,7 +43212,10 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         height = this.height,
         speed = this._speed;
 
-    // Apply running animations.
+    // Update camera proxy object to grab user-changed coordinates.
+    this.cameraProxy.update();
+
+    // Apply running animations (incl overriding camera).
     var now = +new Date();
     if (!this.last) {
       this.last = now - 1000/60;
@@ -43502,10 +43522,10 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
         speed = this._speed;
 
     if (animate === true) animate = {};
-    if (auto || force || (animate && (animate.delay || animate.duration))) {
-      animate = _.extend({ delay: 0, duration: auto || 0 }, animate || {});
+    if (auto || force || (animate && (animate.delay || animate.duration || animate.hold))) {
+      animate = _.extend({ delay: 0, duration: auto || 0, hold: 0 }, animate || {});
     }
-    if (animate && (animate.delay || animate.duration)) {
+    if (animate && (animate.delay || animate.duration || animate.hold)) {
       return animate;
     }
   },
@@ -43521,14 +43541,24 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
 
     if (options.style) {
       _.each(this.select(selector), function (primitive) {
-        animator.animate(primitive.style, options.style, animate);
+        if (animate) {
+          animator.animate(primitive.style, options.style, animate);
+        }
+        else {
+          primitive.style.set(options.style);
+        }
       });
       options = _.extend({}, options);
       delete options.style;
     }
 
     _.each(this.select(selector), function (primitive) {
-      animator.animate(primitive, options, animate);
+      if (animate) {
+        animator.animate(primitive, options, animate);
+      }
+      else {
+        primitive.set(options);
+      }
     });
 
     return this;
@@ -43571,12 +43601,12 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
   /**
    * Hurry primitives currently being animated.
    */
-  hurry: function (selector, keys, limit) {
+  hurry: function (selector, keys, factor) {
     var animator = this.animator;
 
     _.each(this.select(selector, true), function (primitive) {
-      animator.hurry(primitive, keys, limit);
-      primitive.style && animator.hurry(primitive.style, keys, limit);
+      animator.hurry(primitive, keys, factor);
+      primitive.style && animator.hurry(primitive.style, keys, factor);
     });
 
     return this;
@@ -44126,9 +44156,19 @@ MathBox.Director.prototype = {
 
     var verb = op[0],
         selector = op[1],
-        options = op[2],
+        options = op[2] || {},
         animate = op[3],
         primitive;
+
+    if (verb == 'remove') {
+      animate = options;
+    }
+
+    // Reverse timings
+    var duration = (animate && animate.duration !== undefined) ? animate.duration / 4 : 0;
+    var delay = (animate && animate.delay !== undefined) ? animate.delay / 4 : 0;
+    var hold = (animate && animate.hold !== undefined) ? animate.hold / 4 : 0;
+    animate = { delay: hold, duration: duration, hold: delay };
 
     switch (verb) {
       case 'add':
@@ -44140,6 +44180,7 @@ MathBox.Director.prototype = {
           inverse.push([
             'remove',
             options.sequence || (MathBox.Primitive.sequence + 1 + i),
+            animate,
           ]);
         })
         break;
@@ -44151,6 +44192,7 @@ MathBox.Director.prototype = {
             'add',
             primitive.type(),
             stage.get(primitive),
+            animate,
           ]);
         })
         break;
@@ -44158,19 +44200,146 @@ MathBox.Director.prototype = {
       case 'animate':
       case 'set':
         targets = stage.select(selector);
+
         _.each(targets, function (primitive) {
-          var duration = Math.min(300, (animate && (animate.duration !== undefined)) ? animate.duration : 0);
+          var props = stage.get(primitive);
+          var reverted = {};
+          for (i in options) {
+            if (props.style && props.style[i] !== undefined) reverted[i] = props.style[i];
+            else reverted[i] = props[i];
+          }
+//          log('reverted', props, options, reverted)
+
           inverse.push([
             verb,
             primitive.singleton || primitive.get('sequence'),
-            stage.get(primitive),
-            { duration: duration },
+            reverted,
+            animate,
           ]);
         });
         break;
     }
 
     return inverse;
+  },
+
+  /**
+   * Correct reversed delays by measuring total track length and adding the missing final / reversed initial delay.
+   */
+  invertDelay: function (rollback) {
+
+    // Get property names for op
+    function getProps(op) {
+      var verb = op[0],
+          options = op[2] || {};
+
+      var props = ['opacity'];
+      if (verb == 'animate') {
+        props = [];
+        for (i in options) {
+          if (i == 'style') {
+            for (j in options.style) {
+              props.push(j);
+            }
+          }
+          else {
+            props.push(i);
+          }
+        }
+      }
+//      log('getProps', op, props);
+      return props;
+    }
+
+    // New rollback
+    var out = [], i;
+
+    // Collect lengths
+    var lengths = {};
+    rollback.forEach(function (op) {
+      var verb = op[0],
+          selector = op[1] || '',
+          options = op[2] || {},
+          animate = op[3] || {};
+
+      if (verb == 'set') return null;
+      if (verb == 'add') {
+        selector = options.sequence;
+      }
+      if (verb == 'remove') {
+        animate = options;
+      }
+
+      var props = getProps(op);
+      props.forEach(function (prop) {
+        var key = [selector,prop].join('.');
+        if (!lengths[key]) lengths[key] = [];
+        animate = animate || {};
+        lengths[key].push((animate.delay||0) + (animate.duration||0) + (animate.hold||0));
+      });
+    });
+
+    // Get longest track
+    var max = 0;
+    for (i in lengths) {
+      var length = lengths[i] = lengths[i].reduce(function (a, b) { return a + b; });
+      max = Math.max(max, length);
+    }
+//    log('max', max);
+
+    // Assign reverse timings
+    rollback.forEach(function (op) {
+//      log('rollback', op);
+      var verb = op[0],
+          selector = op[1] || '',
+          options = op[2] || {},
+          animate = op[3] || {},
+          type;
+
+      if (verb == 'set') {
+        return out.push(op);
+      }
+      if (verb == 'add') {
+        type = selector;
+        selector = options.sequence;
+      }
+      if (verb == 'remove') {
+        animate = options;
+      }
+
+      var props = getProps(op);
+      props.forEach(function (prop) {
+        var key = [selector,prop].join('.');
+
+        var delay = (animate.delay || 0);
+        var duration = animate.duration || 0;
+        var hold = (animate.hold || 0);
+
+        if (lengths[key] !== undefined) {
+          delay += max - lengths[key];
+//          log('animate y', delay, duration, hold);
+          delete lengths[key];
+        }
+        else {
+//          log('animate n', delay, duration, hold);
+        }
+        animate = { delay: delay, duration: duration, hold: hold };
+
+        if (verb == 'add') {
+          out.push([verb, type, options, animate]);
+        }
+        if (verb == 'remove') {
+          out.push([verb, selector, animate]);
+        }
+        else {
+          var o = {};
+          o[prop] = (options.style && options.style[prop] !== undefined) ? options.style[prop] : options[prop];
+          out.push([verb, selector, o, animate]);
+        }
+      });
+    });
+
+    return out;
   },
 
   /**
@@ -44188,6 +44357,7 @@ MathBox.Director.prototype = {
       if (verb == 'remove') animate = options;
 
       if (rollback) {
+//        console.log('inverting', op);
         var inverse = this.invert(op);
         var args = [0, 0].concat(inverse);
         Array.prototype.splice.apply(rollback, args);
@@ -44196,12 +44366,13 @@ MathBox.Director.prototype = {
       if (skipping) {
         if (animate) {
           animate = _.extend({}, animate);
-          animate.delay = 0;
+          animate.delay = animate.delay / 2;
           animate.duration = animate.duration / 2;
+          animate.hold = animate.hold / 2;
         }
       }
       if (instant) {
-        animate = { delay: 0, duration: 0 };
+        animate = { delay: 0, duration: 0, hold: 0 };
         if (verb == 'animate') {
           verb = 'set';
         }
@@ -44313,16 +44484,17 @@ MathBox.Director.prototype = {
   forward: function (instant, delay) {
     if (this.step >= this.script.length) return;
 
-    var step = this.script[this.step];
-    var rollback = this.rollback[this.step] = [];
+    var index = this.step;
+    var step = this.script[index];
+    var rollback = this.rollback[index] = [];
     this.step++;
 
     var apply = function () {
       this.apply(step, rollback, instant, !instant ? this.skipping() : false);
+      this.rollback[index] = this.invertDelay(rollback);
 
-      this.clock(this.step, true);
-
-      this.emit('go', this.step, 1);
+      this.clock(index + 1, true);
+      this.emit('go', index + 1, 1);
     }.bind(this);
 
     if (delay) {
@@ -44342,14 +44514,14 @@ MathBox.Director.prototype = {
     if (this.step <= 0) return;
 
     this.step--;
-    var step = this.script[this.step];
-    var rollback = this.rollback[this.step];
+    var index = this.step;
+    var rollback = this.rollback[index];
 
     var apply = function () {
       this.apply(rollback, null, instant || this.skipping());
-      delete this.rollback[this.step];
+      delete this.rollback[index];
 
-      this.emit('go', this.step, -1);
+      this.emit('go', index, -1);
     }.bind(this);
 
     if (delay) {
@@ -44511,8 +44683,8 @@ MathBox.Attributes.mixin(MathBox.Style);
 MathBox.CameraProxy = function (world, options) {
 
   this.set({
-    orbit: options.orbit || 3.5,
-    phi: options.phi || τ/4,
+    orbit: options.orbit === undefined ? 3.5 : options.orbit,
+    phi: options.phi === undefined ? τ/4 : options.phi,
     theta: options.theta || 0,
     lookAt: options.lookAt || [0, 0, 0],
   });
@@ -44534,6 +44706,21 @@ MathBox.CameraProxy = function (world, options) {
     controls.update();
   });
   controls.update();
+
+  this.update = function () {
+
+    this.set({
+      orbit: controls.orbit,
+      phi: controls.phi,
+      theta: controls.theta,
+    }, null, true);
+
+    var l = this.get('lookAt');
+    l[0] = controls.lookAt.x;
+    l[1] = controls.lookAt.y;
+    l[2] = controls.lookAt.z;
+
+  };
 }
 
 MathBox.Attributes.mixin(MathBox.CameraProxy);/**
@@ -44912,11 +45099,22 @@ MathBox.Curve.prototype = _.extend(new MathBox.Primitive(null), {
       }
 
       // Allow both parametric (array) and functional (value) style.
-      if (!(p instanceof Array)) p = [x, p, 0];
-      p = p.concat([0, 0, 0]);
+      var px = 0,
+          py = 0,
+          pz = 0;
+      if (!(p instanceof Array)) {
+        px = x;
+        py = +p;
+      }
+      else {
+        var l = p.length;
+        if (l > 0) px = p[0];
+        if (l > 1) py = p[1];
+        if (l > 2) pz = p[2];
+      }
 
       // Update point
-      vertices[i].set.apply(vertices[i], p);
+      vertices[i].set(px, py, pz);
 
       x += step;
     }.bind(this));
@@ -44980,10 +45178,22 @@ MathBox.Bezier.prototype = _.extend(new MathBox.Curve(null), {
       }
 
       // Allow both parametric (array) and functional (value) style.
-      if (!(p instanceof Array)) p = [x, p, 0];
-      p = p.concat([0, 0, 0]);
+      var px = 0,
+          py = 0,
+          pz = 0;
+      if (!(p instanceof Array)) {
+        px = x;
+        py = +p;
+      }
+      else {
+        var l = p.length;
+        if (l > 0) px = p[0];
+        if (l > 1) py = p[1];
+        if (l > 2) pz = p[2];
+      }
 
-      points.push(new THREE.Vector3(p[0], p[1], p[2]));
+      // Update point
+      points.push(new THREE.Vector3(px, py, pz));
     }.bind(this));
 
     var uniforms = {
@@ -45025,6 +45235,12 @@ MathBox.Axis = function (options) {
   if (options === null) return;
 
   MathBox.Primitive.call(this, options);
+
+  this.on('change', function (changed) {
+    if (changed.size !== undefined) {
+      this.arrow && this.arrow.set('size', changed.size);
+    }
+  });
 };
 
 MathBox.Axis.prototype = _.extend(new MathBox.Primitive(null), {
@@ -45392,6 +45608,9 @@ MathBox.Vector = function (options) {
   });
 };
 
+MathBox.Vector.vLast = new THREE.Vector3(),
+MathBox.Vector.vCurrent = new THREE.Vector3();
+
 MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
 
   defaults: function () {
@@ -45417,8 +45636,10 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
   adjust: function (viewport) {
     var options = this.get();
 
+    var visible = this.style.get('opacity') > 0;
+
     // Vector foreshortening requires live to be always-on
-    (options.arrow || options.live) && this.calculate(viewport);
+    visible && (options.arrow || options.live) && this.calculate(viewport);
     _.each(this.arrows, function (arrow) {
       arrow.show(options.arrow);
     });
@@ -45475,9 +45696,6 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
         scale = this.style.get('mathScale');
 
     // Find necessary foreshortening factors so line does not stick out through the arrowhead.
-    var last = new THREE.Vector3(),
-        current = new THREE.Vector3();
-
     var j = 0, k = 0;
     _.loop(n * 2, function (i) {
       if (data && (data[i] !== undefined)) {
@@ -45490,15 +45708,30 @@ MathBox.Vector.prototype = _.extend(new MathBox.Primitive(null), {
       }
 
       // Allow both parametric (array) and functional (value) style.
-      if (!(p instanceof Array)) p = [i, p, 0];
-      p = p.concat([0, 0, 0]);
+      var px = 0,
+          py = 0,
+          pz = 0;
+      if (!(p instanceof Array)) {
+        px = i;
+        py = +p;
+        pz = 0;
+      }
+      else {
+        var l = p.length;
+        if (l > 0) px = p[0];
+        if (l > 1) py = p[1];
+        if (l > 2) pz = p[2];
+      }
 
       // Update point
-      points[i].set.apply(points[i], p);
+      points[i].set(px, py, pz);
 
       // Shorten line segment to make room for arrow
-      vertices[i].set.apply(vertices[i], p);
+      vertices[i].set(px, py, pz);
       if (viewport && arrow && (i % 2 == 1)) {
+        var last = MathBox.Vector.vLast;
+        var current = MathBox.Vector.vCurrent;
+
         // Find vector's world-space length
         current.copy(vertices[i]);
         last.copy(vertices[i-1]);
@@ -45669,11 +45902,23 @@ MathBox.Surface.prototype = _.extend(new MathBox.Primitive(null), {
         }
 
         // Allow both parametric (array) and functional (value) style.
-        if (!(p instanceof Array)) p = [x, p, y];
-        p = p.concat([0, 0, 0]);
+        var px = 0,
+            py = 0,
+            pz = 0;
+        if (!(p instanceof Array)) {
+          px = x;
+          py = +p;
+          pz = y;
+        }
+        else {
+          var l = p.length;
+          if (l > 0) px = p[0];
+          if (l > 1) py = p[1];
+          if (l > 2) pz = p[2];
+        }
 
         // Update point
-        vertices[o].set.apply(vertices[o], p);
+        vertices[o].set(px, py, pz);
 
         x += stepX;
         o++;
@@ -45819,10 +46064,22 @@ MathBox.BezierSurface.prototype = _.extend(new MathBox.Surface(null), {
         }
 
         // Allow both parametric (array) and functional (value) style.
-        if (!(p instanceof Array)) p = [i, p, j];
-        p = p.concat([0, 0, 0]);
+        var px = 0,
+            py = 0,
+            pz = 0;
+        if (!(p instanceof Array)) {
+          px = i;
+          py = +p;
+          pz = j;
+        }
+        else {
+          var l = p.length;
+          if (l > 0) px = p[0];
+          if (l > 1) py = p[1];
+          if (l > 2) pz = p[2];
+        }
 
-        points.push(p);
+        points.push([px, py, pz]);
       }.bind(this));
     }.bind(this));
 
@@ -46122,7 +46379,7 @@ MathBox.Renderable.prototype = {
       if (changed.doubleSided !== undefined || changed.flipSided !== undefined) {
         // Set double sided / culling order.
         this.material.side = options.doubleSided ? THREE.DoubleSide :
-                             THREE.FrontSide;
+                             options.flipSided ? THREE.BackSide : THREE.FrontSide;
         options = { flipSided: (options.doubleSided && options.flipSided) ? -1 : 1 };
         this.material.applyUniforms(options);
       }
@@ -46309,7 +46566,7 @@ MathBox.Renderable.ArrowHead.prototype = _.extend(new MathBox.Renderable(null), 
     this.normal.normalize();
 
     // Prepare binormal
-    var bi = this.bi.cross(this.normal, this.diff);
+    var bi = this.bi.cross(this.normal, this.diff).normalize();
 
     // Renormalize axes.
     var normal = this.normal.cross(this.bi, this.diff);
@@ -47131,10 +47388,9 @@ MathBox.ViewportSphere.prototype = _.extend(new MathBox.ViewportCartesian(null),
           y = vector.y / aspectY,
           z = vector.z * aspectX + focus;
 
-      var radius = Math.sqrt(x*x + y*y + z*z);
-          theta = Math.atan2(y, Math.sqrt(x*x + y*y)),
-          phi = Math.atan2(x, z);
-
+      var radius = Math.sqrt(x*x + y*y + z*z),
+          phi = Math.atan2(y, Math.sqrt(x*x + z*z)),
+          theta = Math.atan2(x, z);
       vector.x = theta / alpha;
       vector.y = phi / alpha * aspectY / yScale;
       vector.z = (radius - focus) / aspectX;

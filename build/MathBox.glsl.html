@@ -356,10 +356,10 @@ void fragmentShaded() {
 
   float shininess = 5.0;
 
-    vec3 normal = normalize(vNormal);
-    #ifdef DOUBLE_SIDED
-      normal = normal * (-1.0 + 2.0 * float(gl_FrontFacing)) * flipSided;
-    #endif
+	vec3 normal = normalize(vNormal);
+	#ifdef DOUBLE_SIDED
+	  normal = normal * (-1.0 + 2.0 * float(gl_FrontFacing)) * flipSided;
+	#endif
 
   vec3 viewPosition = normalize(vViewPosition);
   vec3 lightPosition = (viewMatrix * vec4(1.0, 2.0, -1.0, 0.0)).xyz;
@@ -367,15 +367,15 @@ void fragmentShaded() {
 
   float dotNormal = dot(normal, lightVector);
   float diffuse = dotNormal * .5 + .5;
-    #ifdef DOUBLE_SIDED
-      if (!gl_FrontFacing) {
-        diffuse = diffuse * .9 + .1;
-      }
-    #endif
+	#ifdef DOUBLE_SIDED
+	  if (!gl_FrontFacing) {
+	    diffuse = diffuse * .9 + .1;
+	  }
+	#endif
 
-    vec3 halfVector = normalize(lightVector + viewPosition);
-    float dotNormalHalf = max(dot(normal, halfVector), 0.0);
-    float specular = pow(max(dotNormalHalf, 0.0), shininess);
+	vec3 halfVector = normalize(lightVector + viewPosition);
+	float dotNormalHalf = max(dot(normal, halfVector), 0.0);
+	float specular = pow(max(dotNormalHalf, 0.0), shininess);
 
   vec4 sample = texture2D(texture, vUV);
 
@@ -455,6 +455,7 @@ void main() {
                 vec4(position, 1.0);
 }
 </script>
+
 
 <script type="application/x-glsl" id="generic-vertex-screen">
 varying vec2 vUV;

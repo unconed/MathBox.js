@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Empty Example.</title>
+
+  <!--
+    This example is good for starting from.
+  -->
+
+  <script type="text/javascript" charset="utf-8" src="../vendor/domready.js"></script>
+  <script type="text/javascript" charset="utf-8" src="../build/MathBox-bundle.js"></script>
+
+  <script type="text/javascript">
+    DomReady.ready(function () {
+      if (location.href.match(/^file:/)) {
+        document.getElementById('info').style.opacity = 1;
+        document.getElementById('info').innerHTML = "Sorry. This example does not work when accessed using file://. Please use an http:// host and try again.";
+      }
+    });
+  </script>
+
+  <script type="text/javascript">
+
+  function mathboxSetup() {
+    mathbox
+      .viewport({
+        type: 'sphere',
+        range: [[-π, π], [-π/2, π/2], [-1, 1]],
+      })
+      .camera({
+        orbit: 5,
+      });
+
+    var data = [];
+    var n = 50;
+
+    function r() { return Math.random() * π - π/2; }
+    for (var i = 0; i < n; ++i) {
+      data.push([0,0,0]);
+      data.push([r()*2,r(),1]);
+    }
+
+    mathbox.grid({ offset: [0, 0, 1], n: [32, 32] });
+    mathbox.vector({ n: n, data: data });
+
+    mathbox.animate('viewport', { sphere: 0 }, { duration: 5000 });
+    mathbox.animate('viewport', { sphere: 1 }, { duration: 5000 });
+    mathbox.animate('viewport', { sphere: 0 }, { duration: 5000 });
+  }
+
+  </script>
+
+  <script type="text/javascript">
+  /**
+   * Bootstrap
+   */
+  DomReady.ready(function() {
+    ThreeBox.preload([
+      '../shaders/snippets.glsl.html',
+    ], function () {
+
+      // MathBox boilerplate
+      var mathbox = window.mathbox = mathBox({
+        cameraControls: true,
+        cursor:         true,
+        controlClass:   ThreeBox.OrbitControls,
+        elementResize:  true,
+        fullscreen:     true,
+        screenshot:     true,
+        stats:          false,
+        scale:          1,
+      }).start();
+
+      window.mathboxSetup(mathbox);
+
+    });
+  });
+  </script>
+
+  <link href="base.css" rel="stylesheet" type="text/css" media="screen">
+
+</head>
+<body>
+  <div id="info"></div>
+</body>
+</html>
