@@ -381,7 +381,7 @@ Bezier Surface
 .bezierSurface({
   n: [ 64, 64 ],                       // Number of points in each direction
   domain: [[0, 1], [0, 1]],            // X/Y Domain in interpolation space
-  data: null,                          // Array of control points, each an array of 2 or 3 elements
+  data: null,                          // Array of array of control points, each an array of 2 or 3 elements
   order: 3,                            // (unsupported, must be 3)
   expression: function (x, y, i, j) {  // Live expression for data points.
     return 0;                          // Return single value or array of 2/3 elements.
@@ -427,7 +427,7 @@ Surface
 .surface({
   n: [ 64, 64 ],                         // Number of points in each direction
   domain: [[0, 1], [0, 1]],              // X/Y Input domain
-  data: null,                            // Array of data points, each an array of 2 or 3 elements
+  data: null,                            // Array of array of data points, each an array of 2 or 3 elements
   expression: function (x, y, i, j) {    // Live expression for data points.
     return 0;                            // Return single value or array of 2/3 elements.
   },
@@ -463,3 +463,7 @@ MathBox created by Steven Wittens - http://acko.net/
 Contributors:
 
 * So8res (Nate Soares)
+* johan (Johan Sundström)
+* waldir (Waldir Pimenta)
+* fourplusone (Matthias Bartelmeß)
+* hugoferreira (Hugo Ferreira)
