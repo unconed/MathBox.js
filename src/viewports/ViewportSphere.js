@@ -77,10 +77,9 @@ MathBox.ViewportSphere.prototype = _.extend(new MathBox.ViewportCartesian(null),
           y = vector.y / aspectY,
           z = vector.z * aspectX + focus;
 
-      var radius = Math.sqrt(x*x + y*y + z*z);
-          theta = Math.atan2(y, Math.sqrt(x*x + y*y)),
-          phi = Math.atan2(x, z);
-
+      var radius = Math.sqrt(x*x + y*y + z*z),
+          phi = Math.atan2(y, Math.sqrt(x*x + z*z)),
+          theta = Math.atan2(x, z);
       vector.x = theta / alpha;
       vector.y = phi / alpha * aspectY / yScale;
       vector.z = (radius - focus) / aspectX;
