@@ -35,7 +35,7 @@ window.mathBox = function (element, options) {
 // Fetch shader from <script> tag by id
 MathBox.getShader = function (id) {
   var elem = document.getElementById(id);
-  return elem && (elem.innerText || elem.textContent) || id;
+  return elem && elem.textContent || id;
 };
 
 Math.sign = function (x) {
