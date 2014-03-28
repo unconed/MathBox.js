@@ -467,3 +467,5 @@ Contributors:
 * waldir (Waldir Pimenta)
 * fourplusone (Matthias Bartelmeß)
 * hugoferreira (Hugo Ferreira)
+* EvgenyAgafonchikov (Evgeny Agafonchikov)
+
