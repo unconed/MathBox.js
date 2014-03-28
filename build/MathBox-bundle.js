@@ -40269,7 +40269,7 @@ window.ThreeRTT = window.ThreeRTT || {};
 // or pass through string if not exists.
 ThreeRTT.getShader = function (id) {
   var elem = document.getElementById(id);
-  return elem && elem.innerText || id;
+  return elem && elem.textContent || id;
 };
 
 // Simple loop helper
@@ -40280,7 +40280,7 @@ _.loop = function (n, callback) {
 // Fetch shader from <script> tag by id
 ThreeRTT.getShader = function (id) {
   var elem = document.getElementById(id);
-  return elem && (elem.innerText || elem.textContent) || id;
+  return elem && elem.textContent || id;
 };
 // Check for a power of two.
 ThreeRTT.isPowerOfTwo = function (value) {
@@ -41476,7 +41476,7 @@ window.ShaderGraph = {};
 // Fetch shader from <script> tag by id
 ShaderGraph.getShader = function (id) {
   var elem = document.getElementById(id);
-  return elem && (elem.innerText || elem.textContent) || id;
+  return elem && elem.textContent || id;
 };(function ($) {
 
 /**
@@ -42649,7 +42649,7 @@ window.mathBox = function (element, options) {
 // Fetch shader from <script> tag by id
 MathBox.getShader = function (id) {
   var elem = document.getElementById(id);
-  return elem && (elem.innerText || elem.textContent) || id;
+  return elem && elem.textContent || id;
 };
 
 Math.sign = function (x) {
