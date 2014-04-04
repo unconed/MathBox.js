@@ -36,6 +36,7 @@ src/primitives/Vector.js
 src/primitives/Surface.js
 src/primitives/BezierSurface.js
 src/primitives/Platonic.js
+src/primitives/Label.js
 
 src/renderables/Renderable.js
 src/renderables/Mesh.js
