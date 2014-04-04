@@ -504,3 +504,31 @@ void main() {
   gl_Position = vec4(xy, 1.0, 1.0);
 }
 </script>
+
+<script type="application/x-glsl" id="raytrace-vertex-screen">
+uniform vec2 raytraceViewport;
+uniform vec3 raytracePosition;
+uniform mat4 raytraceMatrix;
+
+varying vec2 vUV;
+varying vec3 vRay;
+
+void main() {
+  // Set UV for lookup
+  vUV = uv;
+
+  // Convert UV to absolute XY.
+  vec2 xy = uv * 2.0 - 1.0;
+
+  // Draw at end of clip space to allow occlusion.
+  gl_Position = vec4(xy, 1.0, 1.0);
+
+  // Calculate ray in world space
+  vRay =
+    (raytraceMatrix * vec4(
+      raytraceViewport * (vUV * 2.0 - 1.0),
+      -1.0,
+      1.0)
+    ).xyz;
+}
+</script>

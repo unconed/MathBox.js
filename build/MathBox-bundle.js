@@ -40197,26 +40197,14 @@ ThreeBox.preload.html = function (file, name, callback) {
     var match;
 
     // Insert javascript directly
-    while (match = res.match(/^(<script\s*>|<script[^>]*type=['"]text\/javascript['"][^>]*>)([\s\S]+?)<\/script>$/m)) {
-      try {
-        /*
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.innerHTML = match[2];
-        document.body.appendChild(script);
-        */
-        eval('(function () {' + match[2] + '})()');
-      }
-      catch (e) {
-        console.error(e);
-        console.error('While evaluating: ' + match[2]);
-      }
-
-      res = res.replace(match[0], '');
+    if (match = res.match(/^<script[^>]*type=['"]text\/javascript['"][^>]*>([\s\S]+?)<\/script>$/m)) {
+      var script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.innerHTML = match[1];
+      document.body.appendChild(script);
     }
-
     // Insert HTML via div
-    if (res.replace(/\s*/g) != '') {
+    else {
       var div = document.createElement('div');
       div.innerHTML = res;
       document.body.appendChild(div);
@@ -40264,12 +40252,13 @@ ThreeBox.preload.audio = function (file, name, callback) {
 
 // Namespace
 window.ThreeRTT = window.ThreeRTT || {};
+ThreeRTT.World = function () {};
 
 // Fetch shader from <script> tag by id
 // or pass through string if not exists.
 ThreeRTT.getShader = function (id) {
   var elem = document.getElementById(id);
-  return elem && elem.textContent || id;
+  return elem && elem.innerText || id;
 };
 
 // Simple loop helper
@@ -40280,7 +40269,7 @@ _.loop = function (n, callback) {
 // Fetch shader from <script> tag by id
 ThreeRTT.getShader = function (id) {
   var elem = document.getElementById(id);
-  return elem && elem.textContent || id;
+  return elem && (elem.innerText || elem.textContent) || id;
 };
 // Check for a power of two.
 ThreeRTT.isPowerOfTwo = function (value) {
@@ -40329,9 +40318,7 @@ ThreeRTT.Stage = function (renderer, options) {
   options.camera.aspect = options.camera.aspect || (options.width / options.height);
 
   // Create internal scene and default camera.
-  this.scene = options.scene || new THREE.Scene();
   this.camera = ThreeRTT.Camera(options.camera);
-	this.scene.add(this.camera);
 
   // Create virtual render target, passthrough options.
   this.target = new ThreeRTT.RenderTarget(renderer, options);
@@ -40350,23 +40337,15 @@ ThreeRTT.Stage.prototype = {
   },
 
   reset: function () {
-    if (this.renderables) {
-      _.each(this.renderables, function (surface) {
-        this.scene.remove(surface);
-      }.bind(this));
-    }
-
+    this.scenes   = [];
     this.passes   = [];
-    this.renderables = [];
   },
 
   // Add object render pass
   paint: function (object, empty) {
 
     // Create root to hold all objects for this pass
-    var root = new THREE.Object3D();
-    root.frustumCulled = false;
-    root.visible = true;
+    var root = new THREE.Scene();
 
     // Create a surface to render the last frame
     if (!empty) {
@@ -40379,9 +40358,8 @@ ThreeRTT.Stage.prototype = {
     root.add(object);
 
     // Add root to scene and insert into pass list
-    this.scene.add(root);
+    this.scenes.push(root);
     this.passes.push(1);
-    this.renderables.push(root);
   },
 
   // Add iteration pass
@@ -40389,12 +40367,14 @@ ThreeRTT.Stage.prototype = {
 
     // Create a surface to render the pass with
     var surface = this._surface(material);
-    surface.visible = false;
+
+    // Create root to hold all objects for this pass
+    var root = new THREE.Scene();
+    root.add(surface);
 
     // Add surface to scene and insert into pass list
-    this.scene.add(surface);
+    this.scenes.push(root);
     this.passes.push(n);
-    this.renderables.push(surface);
 
     return this;
   },
@@ -40410,7 +40390,10 @@ ThreeRTT.Stage.prototype = {
   size: function (width, height) {
     width = Math.floor(width);
     height = Math.floor(height);
+
     this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+
     this.target.size(width, height);
     return this;
   },
@@ -40429,17 +40412,10 @@ ThreeRTT.Stage.prototype = {
   render: function () {
 	  this.target.clear();
 
-    function toggle(object, value) {
-      object.visible = value;
-      _.each(object.children, function (object) { toggle(object, value); });
-    }
-
     _.each(this.passes, function (n, i) {
-      toggle(this.renderables[i], true);
-      _.loop(n, function (i) {
-        this.target.render(this.scene, this.camera);
+      _.loop(n, function (j) {
+        this.target.render(this.scenes[i], this.camera);
       }.bind(this));
-      toggle(this.renderables[i], false);
     }.bind(this));
 
     return this;
@@ -40455,7 +40431,8 @@ ThreeRTT.Stage.prototype = {
   destroy: function () {
     this.target.deallocate();
 
-    this.scene = null;
+    this.scenes = [];
+    this.passes = [];
     this.camera = null;
     this.target = null;
   },
@@ -40491,7 +40468,7 @@ ThreeRTT.Compose.prototype = new THREE.Object3D();
 // Handy Camera factory
 ThreeRTT.Camera = function (options) {
   // Camera passthrough
-  if (options.constructor instanceof THREE.Camera) return options;
+  if (options instanceof THREE.Camera) return options;
 
   // Defaults
   options = _.extend({
@@ -40609,10 +40586,10 @@ ThreeRTT.RenderTarget.prototype = {
 
   // Retrieve / change size
   size: function (width, height) {
-    if (width && height) {
+    if (width !== undefined && height !== undefined) {
       // Round floats to ints to help with half/quarter derived sizes.
-      this.width = width = Math.floor(width);
-      this.height = height = Math.floor(height);
+      this.width = width = Math.max(1, Math.floor(width));
+      this.height = height = Math.max(1, Math.floor(height));
 
       // Refresh/allocate targets.
       this.allocate();
@@ -40637,7 +40614,7 @@ ThreeRTT.RenderTarget.prototype = {
   deallocateTargets: function () {
     // Deallocate real targets that were used in rendering.
     _.each(this.targets || [], function (target) {
-      this.renderer.deallocateRenderTarget(target);
+      target.dispose();
     }.bind(this));
   },
 
@@ -40727,8 +40704,8 @@ ThreeRTT.RenderTarget.prototype = {
     var alpha = renderer.getClearAlpha();
 
     // Apple new clearing color
-    renderer.setClearColorHex(options.clearColor, options.clearAlpha);
-    renderer.clearTarget(this.write(), clear.color, clear.stencil, clear.depth);
+    renderer.setClearColor(options.clearColor, options.clearAlpha);
+    renderer.clearTarget(this.write(), clear.color, clear.depth, clear.stencil);
 
     // Reset state
     renderer.setClearColor(color, alpha);
@@ -40906,9 +40883,9 @@ ThreeRTT.FragmentMaterial = function (renderTargets, fragmentShader, textures, u
   return material;
 };
 /**
- * Specialized ShaderMaterial for downsampling a texture by a factor of 2 with anti-aliasing.
+ * Specialized ShaderMaterial for up/downsampling a texture by a factor of 2 with anti-aliasing.
  */
-ThreeRTT.DownsampleMaterial = function (renderTargetFrom, renderTargetTo) {
+ThreeRTT.ScaleMaterial = function (renderTargetFrom, renderTargetTo, scale) {
   var uniforms = {};
 
   // Accept both Stage and RenderTarget classes
@@ -40933,8 +40910,8 @@ ThreeRTT.DownsampleMaterial = function (renderTargetFrom, renderTargetTo) {
         to = renderTargetTo;
 
     // Correction for odd downsample.
-    var dx = (to.width * 2) / from.width,
-        dy = (to.height * 2) / from.height;
+    var dx = (to.width * scale) / from.width,
+        dy = (to.height * scale) / from.height;
 
     var value = uniforms.sampleAlignment.value;
     value.x = dx;
@@ -40956,75 +40933,64 @@ ThreeRTT.DownsampleMaterial = function (renderTargetFrom, renderTargetTo) {
   material.blending = THREE.NoBlending;
 
   return material;
-};/**
+};
+
+/**
+ * Helper classes
+ */
+ThreeRTT.DownsampleMaterial = function (renderTargetFrom, renderTargetTo) {
+  return new ThreeRTT.ScaleMaterial(renderTargetFrom, renderTargetTo, 2);
+}
+ThreeRTT.UpsampleMaterial = function (renderTargetFrom, renderTargetTo) {
+  return new ThreeRTT.ScaleMaterial(renderTargetFrom, renderTargetTo, 0.5);
+}
+/**
  * Helper for making ShaderMaterials that raytrace in camera space per pixel.
  */
-ThreeRTT.RaytraceMaterial = function (renderTarget, fragmentShader, textures, uniforms) {
+ThreeRTT.RaytraceMaterial = function (renderTargets, camera, fragmentShader, textures, uniforms) {
 
-  // Autoname texture uniforms as texture1, texture2, ...
-  function textureName(j) {
-    return 'texture' + (j + 1);
+  // Accept one or more render targets as input for reading.
+  if (!(renderTargets instanceof Array)) {
+    renderTargets = [renderTargets];
   }
 
-  // Allow for array of textures.
-  if (textures instanceof Array) {
-    var object = {};
-    _.each(textures, function (texture, j) {
-      // Autoname texture uniforms as texture1, texture2, ...
-      var key = textureName(j);
-      object[key] = texture;
-    });
-  }
-  // Allow passing single texture/object
-  else if (textures instanceof THREE.Texture
-        || textures instanceof ThreeRTT.World
-        || textures instanceof THREE.WebGLRenderTarget) {
-    textures = { texture1: textures };
-  }
-
-  // Accept both Stage and RenderTarget classes
-  renderTarget = ThreeRTT.toTarget(renderTarget);
+  var material = new ThreeRTT.ShaderMaterial(
+                  renderTargets, 'raytrace-vertex-screen', fragmentShader, textures, uniforms);
 
   // Add camera uniforms.
-  uniforms = _.extend(uniforms || {}, {
-    cameraViewport: {
+  uniforms = _.extend(material.uniforms || {}, {
+    raytraceViewport: {
       type: 'v2',
-      value: new THREE.Vector2()//,
+      value: new THREE.Vector2(),
     },
-    cameraWorld: {
+    raytracePosition: {
+      type: 'v3',
+      value: new THREE.Vector3(),
+    },
+    raytraceMatrix: {
       type: 'm4',
-      value: new THREE.Matrix4()//,
-    }//,
-  });
-
-  // Make uniforms for input textures.
-  var i = 0;
-  _.each(textures || [], function (texture, key) {
-    uniforms[key] = {
-      type: 't',
-      value: i++,
-      texture: ThreeRTT.toTexture(texture)//,
-    };
+      value: new THREE.Matrix4(),
+    },
   });
 
   // Update camera uniforms on render.
-  renderTarget.on('render', function (scene, camera) {
+  var renderTarget = ThreeRTT.toTarget(renderTargets[0]);
+  var zero = new THREE.Vector3();
+  renderTarget.on('render', function (scene) {
     camera.updateMatrixWorld();
     if (camera.fov) {
       var tan = Math.tan(camera.fov * π / 360);
-      uniforms.cameraViewport.value.set(tan * camera.aspect, tan);
+      uniforms.raytraceViewport.value.set(tan * camera.aspect, tan);
     }
     if (camera.matrixWorld) {
-      uniforms.cameraWorld.value = camera.matrixWorld;
+      uniforms.raytraceMatrix.value.copy(camera.matrixWorld);
+      uniforms.raytraceMatrix.value.setPosition(zero);
+      uniforms.raytracePosition.value.getPositionFromMatrix(camera.matrixWorld);
     }
   });
 
   // Lookup shaders and build material
-  return new THREE.ShaderMaterial({
-    uniforms:       uniforms,
-    vertexShader:   ThreeRTT.getShader('generic-vertex-screen'),
-    fragmentShader: ThreeRTT.getShader(fragmentShader)//,
-  });
+  return material;
 };/**
  * Debug/testing helper that displays the given rendertargets in a grid
  */
@@ -41118,8 +41084,8 @@ ThreeRTT.World  = function (world, options) {
   this._stage = new ThreeRTT.Stage(this._renderer, options);
 
   // Expose scene and camera
-  this._scene  = this._stage.scene;
-  this._camera = this._stage.camera;
+  this._tScene  = this._stage.scene;
+  this._tCamera = this._stage.camera;
 
   // Add to RTT queue at specified order.
   this.queue = ThreeRTT.RenderQueue.bind(world);
@@ -41231,6 +41197,17 @@ ThreeRTT.World.prototype = _.extend(new THREE.Object3D(), tQuery.World.prototype
     return this;
   },
 
+  // Add a shader rendering pass
+  shader: function (vertexShader, fragmentShader, textures, uniforms) {
+    var material = vertexShader instanceof THREE.Material
+                 ? vertexShader
+                 : tQuery.createShaderMaterial(
+                    this, vertexShader, fragmentShader, textures, uniforms);
+
+    this._stage.fragment(material);
+    return this;
+  },
+
   // Add a fragment rendering pass
   fragment: function (fragmentShader, textures, uniforms) {
     var material = fragmentShader instanceof THREE.Material
@@ -41243,11 +41220,11 @@ ThreeRTT.World.prototype = _.extend(new THREE.Object3D(), tQuery.World.prototype
   },
 
   // Add a raytrace rendering pass
-  raytrace: function (fragmentShader, textures, uniforms) {
+  raytrace: function (camera, fragmentShader, textures, uniforms) {
     var material = fragmentShader instanceof THREE.Material
                  ? fragmentShader
                  : tQuery.createRaytraceMaterial(
-                    this, fragmentShader, textures, uniforms);
+                    this, camera, fragmentShader, textures, uniforms);
 
     this._stage.fragment(material);
     return this;
@@ -41267,6 +41244,25 @@ ThreeRTT.World.prototype = _.extend(new THREE.Object3D(), tQuery.World.prototype
     this.scale(scale * 2);
 
     var material = tQuery.createDownsampleMaterial(worldFrom, this);
+    this._stage.fragment(material);
+
+    return this;
+  },
+
+  // Add an upsample rendering pass
+  upsample: function (worldFrom) {
+    // Force this world to right size now if not autosizing
+    if (!worldFrom.autoSize()) {
+      var size = worldFrom.size();
+      this._options.width = size.width;
+      this._options.height = size.height;
+    }
+
+    // Force this world to right scale (will autosize)
+    var scale = worldFrom.scale();
+    this.scale(scale * 0.5);
+
+    var material = tQuery.createUpsampleMaterial(worldFrom, this);
     this._stage.fragment(material);
 
     return this;
@@ -41391,7 +41387,7 @@ tQuery.World.registerInstance('rtt', function (options) {
 });
 
 /**
- * Add a surface showing a render-to-texture surface to this world.
+ * Add a surface composing a render-to-texture to the screen.
  */
 tQuery.World.registerInstance('compose', function (rtts, fragmentShader, textures, uniforms) {
   var compose = tQuery.createComposeRTT(rtts, fragmentShader, textures, uniforms);
@@ -41447,8 +41443,8 @@ tQuery.registerStatic('createFragmentMaterial', function (worlds, fragmentShader
 /**
  * Create a RaytraceMaterial.
  */
-tQuery.registerStatic('createRaytraceMaterial', function (world, fragmentShader, textures, uniforms) {
-  return new ThreeRTT.RaytraceMaterial(world, fragmentShader, textures, uniforms);
+tQuery.registerStatic('createRaytraceMaterial', function (world, camera, fragmentShader, textures, uniforms) {
+  return new ThreeRTT.RaytraceMaterial(world, camera, fragmentShader, textures, uniforms);
 });
 
 /**
@@ -41456,6 +41452,20 @@ tQuery.registerStatic('createRaytraceMaterial', function (world, fragmentShader,
  */
 tQuery.registerStatic('createDownsampleMaterial', function (worldFrom, worldTo) {
   return new ThreeRTT.DownsampleMaterial(worldFrom, worldTo);
+});
+
+/**
+ * Create a UpsampleMaterial.
+ */
+tQuery.registerStatic('createUpsampleMaterial', function (worldFrom, worldTo) {
+  return new ThreeRTT.UpsampleMaterial(worldFrom, worldTo);
+});
+
+/**
+ * Create a ScaleMaterial.
+ */
+tQuery.registerStatic('createScaleMaterial', function (worldFrom, worldTo, scale) {
+  return new ThreeRTT.DownsampleMaterial(worldFrom, worldTo, scale);
 });
 /**
  * ShaderGraph.js. Assemble GLSL shaders on the fly.
@@ -41476,7 +41486,7 @@ window.ShaderGraph = {};
 // Fetch shader from <script> tag by id
 ShaderGraph.getShader = function (id) {
   var elem = document.getElementById(id);
-  return elem && elem.textContent || id;
+  return elem && (elem.innerText || elem.textContent) || id;
 };(function ($) {
 
 /**
@@ -41512,8 +41522,21 @@ $.Block.prototype = {
   },
 
   fetch: function (program, phase, outlet, priority) {
-    // add outlet code to program
-  }//,
+    // Add outlet output code to program
+  },
+
+  id: function (program, phase, outlet, priority) {
+    // Lookup inouts further up the chain
+    if (outlet.meta.inout) {
+      var input = outlet.node.get(outlet.name, $.IN).input;
+      if (input) {
+        return input.node.owner().fetch(program, phase, input, priority + 1);
+      }
+    }
+
+    // Use this outlet's ID as intermediate variable name
+    return outlet.id();
+  },
 
 };
 
@@ -41538,13 +41561,14 @@ $.Block.Snippet.prototype = _.extend({}, $.Block.prototype, {
     if (!program.include(this, phase)) {
       this.insert(program, phase, priority);
     }
+
     // Use this outlet's ID as intermediate variable name.
-    return outlet.id();
+    return this.id(program, phase, outlet, priority);
   },
 
   outlets: function () {
     return $.Block.Snippet.makeOutlets(this.snippet);
-  }//,
+  },
 
 });
 
@@ -41592,7 +41616,7 @@ $.Block.Material.prototype = _.extend({}, $.Block.prototype, {
     }
 
     // Use this outlet's ID as intermediate variable name.
-    return outlet.id();
+    return this.id(program, phase, outlet, priority);
   },
 
   outlets: function () {
@@ -41600,7 +41624,7 @@ $.Block.Material.prototype = _.extend({}, $.Block.prototype, {
     var fragment = $.Block.Snippet.makeOutlets(this.fragment);
 
     return _.union(vertex, fragment);
-  }//,
+  },
 
 });
 
@@ -41618,13 +41642,27 @@ $.Block.Snippet.makeOutlets = function (snippet) {
   var args = snippet.arguments();
 
   _.each(args.parameters, function (arg) {
+    // Strip in/out suffix and set meta data
+    arg = _.extend({}, arg);
     arg.meta = { required: true };
     arg.hint = arg.name.replace(/(In|Out)$/, '');
     arg.category = 'parameter';
+
+    // Split inout args into two separate outlets
+    if (arg.inout == $.INOUT) {
+      arg.meta.inout = true;
+
+      var input = _.extend({}, arg);
+      input.inout = $.IN;
+      outlets.push(input);
+
+      arg.inout = $.OUT;
+    }
     outlets.push(arg);
   });
 
   _.each(args.uniforms, function (arg) {
+    // Strip in/out suffix and set meta data
     arg.meta = { };
     arg.hint = arg.name.replace(/(In|Out)$/, '');
     arg.category = 'uniform';
@@ -41646,8 +41684,12 @@ $.Block.Snippet.compileCall = function (program, phase, node, snippet, priority)
 
   // Assign intermediate variables.
   _.each(signature.parameters, function (arg) {
-    var outlet = node.get(arg.name);
-    if (arg.inout == $.IN) {
+
+    var fetch = arg.inout == $.INOUT ? $.IN : arg.inout;
+    var outlet = node.get(arg.name, fetch);
+
+    // Fetch code to calculate this input
+    if (arg.inout == $.IN || arg.inout == $.INOUT) {
       if (outlet.input) {
         var owner = outlet.input.node.owner();
 
@@ -41656,10 +41698,12 @@ $.Block.Snippet.compileCall = function (program, phase, node, snippet, priority)
         args.push(variable);
       }
       else {
-        console.log('Outlet', arg, outlet);
+        console.log('Outlet', arg, input);
         throw ["Missing connection on outlet for " + arg.name];
       }
     }
+
+    // Add output to call arguments
     else if (arg.inout == $.OUT) {
       var variable = outlet.id();
       program.variable(phase, variable, arg);
@@ -41784,6 +41828,15 @@ $.Factory.prototype = {
     return this;
   },
 
+  pass: function () {
+    this.next();
+
+    var sub = this.stack[0];
+    sub.start.push(null);
+
+    return this.combine();
+  },
+
   next: function () {
     var sub = this.stack.shift();
     var main = this.stack[0];
@@ -41805,12 +41858,19 @@ $.Factory.prototype = {
     var sub = this.stack.shift(),
         main = this.stack[0];
 
-    _.each(sub.start, function (to) {
-      _.each(main.end, function (from) {
-        from.connect(to, true);
+    if (sub.start.length) {
+      _.each(sub.start, function (to) {
+        // Passthrough all outlets to other side
+        if (!to) {
+          sub.end = sub.end.concat(main.end);
+        }
+        // Normal destination
+        else _.each(main.end, function (from) {
+          from.connect(to, true);
+        });
       });
-    });
-    main.end = sub.end;
+      main.end = sub.end;
+    }
 
     return this;
   },
@@ -42516,7 +42576,7 @@ $.Outlet = function (inout, name, hint, type, category, exposed, meta) {
   // Object constructor syntax
   if (typeof inout == 'object') {
     var object = inout;
-    return new $.Outlet(object.inout, object.name, object.hint, object.type, object.category, object.exposed);
+    return new $.Outlet(object.inout, object.name, object.hint, object.type, object.category, object.exposed, object.meta);
   }
 
   this.node     = null;
@@ -46255,6 +46315,74 @@ MathBox.Platonic.prototype = _.extend(new MathBox.Primitive(null), {
 });
 
 MathBox.Primitive.types.platonic = MathBox.Platonic;
+/**
+ * Text label at specified position
+ */
+MathBox.Label = function (options) {
+  // Allow inheritance constructor
+  if (options === null) return;
+
+  MathBox.Primitive.call(this, options);
+};
+
+MathBox.Label.prototype = _.extend(new MathBox.Primitive(null), {
+
+  defaults: function () {
+    return {
+      position: [0, 0, 0],
+      facing: 1,
+      distance: 15,
+      style: {
+        color: new THREE.Color(0x707070),
+      },
+      text: ""
+    };
+  },
+
+  renderables: function () {
+    return [ this.labels ];
+  },
+
+  type: function () {
+    return 'label';
+  },
+
+  adjust: function (viewport, camera) {
+    var options = this.get(),
+    // Axis vector direction for labels
+    p = [0, 0, 0];
+    p[options.facing] = 1;
+    var labelTangent = this.labelTangent;
+    labelTangent.set.apply(labelTangent, p);
+    this.labels.show(true);
+  },
+
+  make: function () {
+    var options = this.get(),
+      position = options.position,
+      text = options.text,
+      distance = options.distance,
+      style = this.style,
+      labelTangent = this.labelTangent = new THREE.Vector3();
+
+    var labelOptions = { dynamic: true, distance: distance };
+    var labelPoint  = new THREE.Vector3();
+    labelPoint.set.apply(labelPoint, position)
+    // label text callback
+    var callback = function (i) {
+      return text;
+    }.bind(this);
+    
+    this.labels = new MathBox.Renderable.Labels([labelPoint], labelTangent, callback, labelOptions, style);
+  },
+
+});
+
+MathBox.Label.validateArgs = function (options) {
+  return options;
+};
+
+MathBox.Primitive.types.label = MathBox.Label;
 MathBox.Renderable = function (options, style) {
   // Allow inheritance constructor
   if (options === null) return;
