@@ -18,6 +18,7 @@ MathBox.Label.prototype = _.extend(new MathBox.Primitive(null), {
       style: {
         color: new THREE.Color(0x707070),
       },
+      class_name: 'mathbox-labels',	// allow user to change css class of labels div
       text: ""
     };
   },
@@ -52,11 +53,12 @@ MathBox.Label.prototype = _.extend(new MathBox.Primitive(null), {
       position = options.position,
       text = options.text,
       distance = options.distance,
+      class_name = options.class_name,
       style = this.style,
     labelTangent = this.labelTangent = new THREE.Vector3(),
       labelPoint  = this.labelPoint = new THREE.Vector3();
 
-    var labelOptions = { dynamic: true, distance: distance };
+    var labelOptions = { dynamic: true, distance: distance, class_name: class_name };
     labelPoint.set.apply(labelPoint, position)
     // label text callback
     var callback = function (i) {

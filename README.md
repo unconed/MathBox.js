@@ -429,7 +429,8 @@ Label
   position: [0, 0, 0], // location of label
   text: 'hello',       // text to be displayed 
   distance: 15,        // text sprite anchor point offset
-  facing: 1            // which axis tangent direction the label should be facing towards
+  facing: 1,           // which axis tangent direction the label should be facing towards
+  class_name: 'math'   // css class name to use for the labels (leave unset for default 'mathbox-labels')
 })
 ```
 
