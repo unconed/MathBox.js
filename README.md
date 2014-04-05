@@ -358,6 +358,7 @@ Axis
   tickScale: 10,     // Integer denoting the base for recursive division. 2 = binary, 10 = decimal
   arrow: true,       // Whether to include an arrow on the axis
   size: .07,         // Size of the arrow relative to the stage
+  formatter: null    // Function which takes index of axis label as argument, and returns text label
 })
 ```
 
@@ -422,6 +423,17 @@ Grid
 })
 ```
 
+Label
+```javascript
+.label({
+  position: [0, 0, 0], // location of label
+  text: 'hello',       // text to be displayed 
+  distance: 15,        // text sprite anchor point offset
+  facing: 1,           // which axis tangent direction the label should be facing towards
+  class_name: 'math'   // css class name to use for the labels (leave unset for default 'mathbox-labels')
+})
+```
+
 Surface
 ```javascript
 .surface({
@@ -454,6 +466,13 @@ Vector
   size: .07,                         // Size of the arrowhead relative to the stage
 })
 ```
+
+Dependencies
+------------
+
+* vendor/ThreeBox.js -- https://github.com/unconed/ThreeBox.js (use commit tag ff838075a7bea4ba59719f845f466b9c4b2cbafe)
+* vendor/ThreeRTT.js -- https://github.com/unconed/ThreeRTT.js
+* vendor/ShaderGraph.js -- https://github.com/unconed/ShaderGraph.js 
 
 Contributions
 -------------
