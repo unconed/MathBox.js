@@ -6707,6 +6707,7 @@ MathBox.Label.prototype = _.extend(new MathBox.Primitive(null), {
       style: {
         color: new THREE.Color(0x707070),
       },
+      class_name: 'mathbox-labels',	// allow user to change css class of labels div
       text: ""
     };
   },
@@ -6741,11 +6742,12 @@ MathBox.Label.prototype = _.extend(new MathBox.Primitive(null), {
       position = options.position,
       text = options.text,
       distance = options.distance,
+      class_name = options.class_name,
       style = this.style,
     labelTangent = this.labelTangent = new THREE.Vector3(),
       labelPoint  = this.labelPoint = new THREE.Vector3();
 
-    var labelOptions = { dynamic: true, distance: distance };
+    var labelOptions = { dynamic: true, distance: distance, class_name: class_name };
     labelPoint.set.apply(labelPoint, position)
     // label text callback
     var callback = function (i) {
@@ -7211,7 +7213,8 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
     return {
       absolute: true,
       distance: 15,
-      size: 1//,
+      size: 1,
+      class_name: 'mathbox-labels' //,
     };
   },
 
@@ -7220,6 +7223,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         points = this.points,
         tangent = this.tangent,
         sprites = this.sprites,
+        class_name = options.class_name,
         n = this.points.length;
 
     // Reusable vector for later.
@@ -7228,7 +7232,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
     // Make parent object to hold all the label divs in one Object3D.
     var element = document.createElement('div');
     var object = this.object = new MathBox.Sprite(element);
-    element.className = 'mathbox-labels';
+    element.className = class_name;
 
     // Make sprites for all labels
     _.loop(n, function (i) {
@@ -7241,7 +7245,9 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
       var sprite = new MathBox.Sprite(element, tangent);
 
       // Position at anchor point
-      element.className = 'mathbox-label';
+      if (class_name == "mathbox-labels"){
+	  element.className = 'mathbox-label';
+      }
       inner.className = 'mathbox-wrap';
       inner.style.position = 'relative';
       inner.style.display = 'inline-block';
