@@ -12,9 +12,10 @@ MathBox.Label.prototype = _.extend(new MathBox.Primitive(null), {
 
   defaults: function () {
     return {
-      position: [0, 0, 0],
+      position: null,
       facing: 1,
       distance: 15,
+      expression: function () { return 0; },
       style: {
         color: new THREE.Color(0x707070),
       },
@@ -43,7 +44,11 @@ MathBox.Label.prototype = _.extend(new MathBox.Primitive(null), {
 
     var position = options.position;
     var labelPoint = this.labelPoint;
-    labelPoint.set.apply(labelPoint, position);
+    if (position){
+	labelPoint.set.apply(labelPoint, position);
+    }else{
+	labelPoint.set.apply(labelPoint, options.expression.call(this));
+    }
 
     this.labels.show(true);
   },
@@ -55,11 +60,16 @@ MathBox.Label.prototype = _.extend(new MathBox.Primitive(null), {
       distance = options.distance,
       class_name = options.class_name,
       style = this.style,
-    labelTangent = this.labelTangent = new THREE.Vector3(),
+      labelTangent = this.labelTangent = new THREE.Vector3(),
       labelPoint  = this.labelPoint = new THREE.Vector3();
 
     var labelOptions = { dynamic: true, distance: distance, class_name: class_name };
-    labelPoint.set.apply(labelPoint, position)
+    if (position){
+	labelPoint.set.apply(labelPoint, position);
+    }else{
+	labelPoint.set.apply(labelPoint, options.expression.call(this));
+    }
+    // labelPoint.set.apply(labelPoint, position);
     // label text callback
     var callback = function (i) {
       return text;
