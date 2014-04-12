@@ -1,0 +1,28 @@
+{
+  "name": "MathBox.js",
+  "version": "0.0.0",
+  "homepage": "https://github.com/unconed/MathBox.js",
+  "authors": [
+    "unconed",
+    "waldir",
+    "Soares",
+    "EvgenyAgafonchikov",
+    "fourplusone",
+    "johan"
+  ],
+  "description": "\"MathBox is a library for rendering presentation-quality math diagrams in a browser using WebGL.\"",
+  "main": "build/MathBox-bundle.js",
+  "keywords": [
+    "math",
+    "box",
+    "mathbox"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
