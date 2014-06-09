@@ -5231,7 +5231,7 @@ MathBox.Overlay.prototype = {
       this.fov = null;
       this.cx = (camera.left + camera.right);
       this.cy = (camera.top + camera.bottom);
-      this.dx = this.height / (camera.right - camera.left);
+      this.dx = this.width  / (camera.right - camera.left);
       this.dy = this.height / (camera.bottom - camera.top);
     }
 
