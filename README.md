@@ -30,6 +30,7 @@ Examples
 * [Warping cartesian into cylindrical coordinates](http://acko.net/files/mathbox/MathBox.js/examples/SurfaceWarp.html)
 * [Texture mapping a surface](http://acko.net/files/mathbox/MathBox.js/examples/TextureMap.html)
 * [Cross-eyed 3D](http://acko.net/files/mathbox/MathBox.js/examples/3D.html)
+* [Orthographic camera](http://acko.net/files/mathbox/MathBox.js/examples/Orthographic.html)
 
 
 Try It Out

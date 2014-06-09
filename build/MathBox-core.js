@@ -2162,7 +2162,16 @@ MathBox.Overlay.prototype = {
   },
 
   update: function (camera) {
-		this.fov = 0.5 / Math.tan( camera.fov * Math.PI / 360 ) * this.height;
+    if (camera.fov) {
+      this.fov = 0.5 / Math.tan( camera.fov * Math.PI / 360 ) * this.height;
+    }
+    else {
+      this.fov = null;
+      this.cx = (camera.left + camera.right);
+      this.cy = (camera.top + camera.bottom);
+      this.dx = this.height / (camera.right - camera.left);
+      this.dy = this.height / (camera.bottom - camera.top);
+    }
 
     // Iterate over individual objects for update
     _.each(this.sprites, function (sprite) {
@@ -2256,8 +2265,15 @@ MathBox.Overlay.prototype = {
     camera.matrixWorldInverse.multiplyVector3(v);
 
     // Project to 2D and convert to pixels
-    var x = -(v.x / v.z) * this.fov + this.width  * .5;
-    var y =  (v.y / v.z) * this.fov + this.height * .5;
+    var x, y;
+    if (this.fov) {
+      x = -(v.x / v.z) * this.fov + this.width  * .5;
+      y =  (v.y / v.z) * this.fov + this.height * .5;
+    }
+    else {
+      x = (v.x - this.cx) * this.dx + this.width  * .5;
+      y = (v.y - this.cy) * this.dy + this.height * .5;
+    }
 
     // Add spacer
     if (object.distance) {
