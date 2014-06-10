@@ -1002,7 +1002,7 @@ ThreeRTT.RenderTarget.prototype = {
   deallocateTargets: function () {
     // Deallocate real targets that were used in rendering.
     _.each(this.targets || [], function (target) {
-      target.dispose();
+      target.dispose && target.dispose();
     }.bind(this));
   },
 
