@@ -456,6 +456,29 @@ Vector
 })
 ```
 
+Building from source
+--------------------
+
+After an initial clone, all submodules will have to be initialized and updated.
+```bash
+$ git submodule update --init --recursive
+```
+
+Build using
+```bash
+$ ./build.sh
+```
+
+To build without minification set SKIP\_MINIFY
+```bash
+$ SKIP_MINIFY=true ./build.sh
+```
+
+Or export it to disable it for the rest of the session
+```bash
+$ export SKIP_MINIFY=true
+```
+
 Contributions
 -------------
 
