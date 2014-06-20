@@ -4186,7 +4186,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         if (text === undefined) text = '';
 
         // Try to cast to number and round to n decimals
-        if (+text == text) {
+        if (decimals !== undefined && +text == text) {
           var x = +text;
           if (x != 0) {
             var s = x < 0 ? -1 : 1;
