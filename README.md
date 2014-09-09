@@ -167,7 +167,7 @@ All mathbox arguments are optional. The following options are available for conf
 ```javascript
 {
   // Whether to allow mouse control of the camera.
-  cameraControls: true, 
+  cameraControls: true,
   // Override the class to use for mouse controls.
   controlClass: ThreeBox.OrbitControls,
   // Whether to show the mouse cursor.
@@ -176,12 +176,12 @@ All mathbox arguments are optional. The following options are available for conf
   // Whether to track resizing of the containing element.
   elementResize: true,
   // Enable fullscreen mode with 'f' (browser support is buggy)
-  fullscreen: true, 
+  fullscreen: true,
   // Render at scaled resolution, e.g. scale 2 is half the width/height.
   // Fractional values allowed.
-  scale: 1, 
+  scale: 1,
   // Enable screenshot taking with 'p'
-  screenshot: true, 
+  screenshot: true,
   // Show FPS stats in the corner
   stats: true,
 }
@@ -264,7 +264,7 @@ Each mathbox scene has an associated viewport. This sets up a specific mathemati
 
 The following viewport types are available:
 
-__Cartesian__  
+__Cartesian__
 Regular linear XYZ.
 
 ```javascript
@@ -277,7 +277,7 @@ Regular linear XYZ.
 })
 ```
 
-__Projective__  
+__Projective__
 Applies a 4x4 homogeneous/projective transform.
 
 ```javascript
@@ -294,7 +294,7 @@ Applies a 4x4 homogeneous/projective transform.
 })
 ```
 
-__Polar__  
+__Polar__
 Polar coordinate grid in radians. X is angle, Y is radius, Z is ordinary depth.
 Also useful for visualizing complex operations in polar representation.
 
@@ -312,7 +312,7 @@ Also useful for visualizing complex operations in polar representation.
 })
 ```
 
-__Sphere__  
+__Sphere__
 Spherical coordinate grid in radians. X is longitude, Y is latitude, Z is radius.
 
 ```javascript
@@ -454,6 +454,29 @@ Vector
   arrow: true,                       // Whether to draw arrowheads
   size: .07,                         // Size of the arrowhead relative to the stage
 })
+```
+
+Building from source
+--------------------
+
+After an initial clone, all submodules will have to be initialized and updated.
+```bash
+$ git submodule update --init --recursive
+```
+
+Build using
+```bash
+$ ./build.sh
+```
+
+To build without minification set SKIP\_MINIFY
+```bash
+$ SKIP_MINIFY=true ./build.sh
+```
+
+Or export it to disable it for the rest of the session
+```bash
+$ export SKIP_MINIFY=true
 ```
 
 Contributions
