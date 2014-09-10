@@ -44758,6 +44758,9 @@ MathBox.Attributes.mixin(MathBox.Style);
  */
 MathBox.CameraProxy = function (world, options) {
 
+  // avoid atan2 singularity
+  var clamp = function (x) { return Math.min(π/2 - .0001, Math.max(-π/2 + .0001, x)); };
+
   this.set({
     orbit: options.orbit === undefined ? 3.5 : options.orbit,
     phi: options.phi === undefined ? τ/4 : options.phi,
@@ -44773,6 +44776,7 @@ MathBox.CameraProxy = function (world, options) {
   this.on('change', function (changed) {
     _.each(changed, function (value, key) {
       if (key == 'lookAt') return;
+      if (key == 'theta') value = clamp(value);
       controls[key] = value;
     });
 
@@ -44788,7 +44792,7 @@ MathBox.CameraProxy = function (world, options) {
     this.set({
       orbit: controls.orbit,
       phi: controls.phi,
-      theta: controls.theta,
+      theta: clamp(controls.theta),
     }, null, true);
 
     var l = this.get('lookAt');
