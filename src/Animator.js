@@ -74,7 +74,7 @@ MathBox.Animator.prototype = {
     factor = factor || 4;
 
     // Reduce
-    _.each(keys || object.__queue, function (queue, key) {
+    _.each(keys || object.__queue, function (key) {
       _.each(object.__queue[key], function (op) {
         op.hurry(factor);
       });
@@ -86,7 +86,7 @@ MathBox.Animator.prototype = {
    */
   stop: function (object, keys, apply) {
     // Dequeue all animations, applying if requested.
-    _.each(keys || object.__queue, function (queue, key) {
+    _.each(keys || object.__queue, function (key) {
       while (object.__queue[key]) {
         this.dequeue(object, key, apply);
       }
