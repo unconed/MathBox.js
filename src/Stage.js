@@ -477,8 +477,8 @@ MathBox.Stage.prototype = _.extend(MathBox.Stage.prototype, {
     var animator = this.animator;
 
     _.each(this.select(selector, true), function (primitive) {
-      animator.stop(primitive, keys);
-      primitive.style && animator.stop(primitive.style, keys);
+      animator.stop(primitive, keys, true);
+      primitive.style && animator.stop(primitive.style, keys, true);
     });
 
     return this;
