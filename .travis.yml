@@ -1,0 +1,4 @@
+install:
+    - git submodule update --init --recursive
+
+script: cd test && phantomjs TestRunner.js
