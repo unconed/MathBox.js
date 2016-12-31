@@ -15,6 +15,9 @@ MathBox.Curve.prototype = _.extend(new MathBox.Primitive(null), {
       n: 64,
       domain: [0, 1],
       data: null,
+      pointLabels: false,
+      pointLabelTexts: null,
+      distance: 15,
       expression: function () { return 0; },
       live: true,
       points: false,
@@ -28,15 +31,16 @@ MathBox.Curve.prototype = _.extend(new MathBox.Primitive(null), {
   },
 
   renderables: function () {
-    return [ this.line, this.points ];
+    return [ this.line, this.points, this.pointlabels ];
   },
 
   adjust: function (viewport) {
     var options = this.get();
     this.line.show(options.line);
     this.points.show(options.points);
+    this.pointlabels.show(options.pointlabels);
 
-    var visible = (options.line || options.points) && this.style.get('opacity') > 0;
+    var visible = (options.line || options.points) || options.pointlabels && this.style.get('opacity') > 0;
     visible && options.live && this.calculate();
   },
 
@@ -44,14 +48,27 @@ MathBox.Curve.prototype = _.extend(new MathBox.Primitive(null), {
     var that = this,
         options = this.get(),
         style = this.style,
-        n = options.n;
-
-    var vertices = this.vertices = [];
+        n = options.n,
+        distance = options.distance,
+        pointLabels = options.pointLabels,
+        pointLabelTexts = options.pointLabelTexts,
+        vertices = this.vertices = [],
+        pointLabelTextArray = this.pointLabelTextArray = [],
+        labelTangent = this.labelTangent = new THREE.Vector3(); // Orientation for points and labels
 
     // Allocate vertices.
-    _.loop(n, function () {
+    _.loop(n, function (i) {
       vertices.push(new THREE.Vector3());
+      pointLabelTextArray.push(new String);
     });
+
+    _.loop(n, function (i) {
+      l = pointLabelTexts[i];
+      pointLabelTextArray[i] = l;
+    });
+
+    // Prepare primitives
+    var labelOptions = { dynamic: true, distance: distance };
 
     // Instantiate renderables.
     var make = function (type) {
@@ -60,6 +77,12 @@ MathBox.Curve.prototype = _.extend(new MathBox.Primitive(null), {
         dynamic: options.live,
       }, style);
     };
+
+    // Axis vector direction for labels
+    p = [0, 0, 0];
+    labelTangent.set.apply(labelTangent, p);
+    
+    this.pointlabels = new MathBox.Renderable.PointLabels(vertices, pointLabelTextArray, labelTangent, labelOptions, style);
 
     this.line = make('line');
     this.points = make('points');
