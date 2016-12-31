@@ -111,7 +111,7 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
           }
         }
 
-        if (!mathjax) {
+        if (!mathjax && !window.TeXZilla) {
           text = (''+text).replace(/^-/, '–');
         }
       }
@@ -125,6 +125,9 @@ MathBox.Renderable.Labels.prototype = _.extend(new MathBox.Renderable(null), {
         if (mathjax) {
           inner.innerHTML = "\\(" + text + "\\)";
           MathJax.Hub.queue.Push(["Typeset", MathJax.Hub, inner]);
+        }
+        else if (window.TeXZilla) {
+          inner.innerHTML = window.TeXZilla.toMathMLString(text.toString());
         }
         else {
           inner.innerHTML = text;
